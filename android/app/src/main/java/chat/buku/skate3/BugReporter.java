@@ -116,6 +116,7 @@ final class BugReporter {
                     int equals = line.indexOf('=');
                     if (equals >= 0) {
                         String value = line.substring(equals + 1).trim();
+                        if (value.startsWith("2")) return "Custom";
                         if (value.startsWith("1")) return "High-End / Quality";
                         if (value.startsWith("0")) return "RG406V / Performance";
                     }

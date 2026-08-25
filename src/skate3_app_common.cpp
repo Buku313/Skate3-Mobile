@@ -120,10 +120,39 @@ REXCVAR_DEFINE_DOUBLE(skate3_ultrawide_target_aspect, 0.0, "Skate 3",
 REXCVAR_DEFINE_INT32(
     skate3_android_quality_profile, 0, "Skate 3",
     "Android device profile: 0 = RG406V / Performance (288p and aggressive "
-    "scene cuts), 1 = High-End / Quality (720p and the full native material "
-    "pipeline). Applied after restart.")
-    .range(0, 1)
+    "scene cuts), 1 = High-End / Quality (720p, verified lean scene feature "
+    "set), 2 = Custom (user-controlled scene resolution, world detail and "
+    "renderer features; presets do not overwrite saved settings). Applied "
+    "after restart.")
+    .range(0, 2)
     .lifecycle(rex::cvar::Lifecycle::kRequiresRestart);
+// Custom-profile scene target caps, consumed by EnsureOutputSizedTargets in
+// skate3_native_scene_gpu.cpp. Only read while
+// skate3_android_quality_profile = 2 so the verified Performance/Quality
+// preset targets stay byte-identical. 0 = keep that profile's 1280x720 box.
+REXCVAR_DEFINE_INT32(skate3_android_scene_width_cap, 0, "Skate 3",
+                     "Custom profile: 3D scene target width cap in pixels "
+                     "(0 = 1280). Applies live; the scene target is rebuilt "
+                     "on the next frame.")
+    .range(0, 2560)
+    .lifecycle(rex::cvar::Lifecycle::kHotReload);
+REXCVAR_DEFINE_INT32(skate3_android_scene_height_cap, 540, "Skate 3",
+                     "Custom profile: 3D scene target height cap in pixels "
+                     "(0 = 720). Applies live; the scene target is rebuilt "
+                     "on the next frame.")
+    .range(0, 1440)
+    .lifecycle(rex::cvar::Lifecycle::kHotReload);
+// Android decodes BC textures to RGBA8 on the CPU (mobile GPUs expose no BC),
+// starting from the first guest mip at or below this size. 128 is the
+// verified handheld budget; each doubling quadruples a texture's resident
+// bytes against the tex_store_mb budget. Applies to textures as they are
+// (re)uploaded, so already-resident art sharpens as the world re-streams.
+REXCVAR_DEFINE_INT32(skate3_android_texture_size_cap, 128, "Skate 3",
+                     "Largest mip level (in pixels) Android decodes for "
+                     "compressed world/character textures. Higher is sharper "
+                     "and uses more memory and decode time.")
+    .range(64, 1024)
+    .lifecycle(rex::cvar::Lifecycle::kHotReload);
 #endif
 
 namespace {
@@ -684,8 +713,38 @@ void Skate3BaseApp::OnConfigurePaths(rex::PathConfig& paths) {
       {"skate3_native_render_scene_perf_interval", "300"},
       {"show_fps_counter", "false"},
   };
+  // Custom profile: pin only the internal pacing/stability cvars that have no
+  // user-facing row anywhere; every user-facing setting (handheld_potato,
+  // scene caps, MSAA, shadows, SSAO, bloom, volumetrics, lightmaps/macro/
+  // decals, draw distance, FPS counter, ...) is deliberately absent so the
+  // values loaded from the saved settings file survive this preset pass.
+  // When the user switches profiles in the menu, SaveSimpleSettingsConfig
+  // snapshots the then-active values, so Custom starts from the last-used
+  // preset's known-good feature set rather than desktop defaults.
+  constexpr std::pair<std::string_view, std::string_view> kCustomBasePreset[] = {
+      {"native_render_suppress_mode", "1"},
+      // guest_static_refresh and lw_update_refresh are deliberately absent:
+      // they are the Custom profile's user-facing World/NPC update pacing
+      // rows and load from the settings file.
+      {"skate3_native_render_scene_ssr", "false"},
+      {"skate3_native_render_scene_hdr", "false"},
+      {"skate3_native_render_scene_smooth_camera", "false"},
+      {"skate3_native_render_scene_selection_outline", "false"},
+      {"skate3_native_render_scene_sort_opaque", "false"},
+      {"skate3_native_render_scene_splines", "false"},
+      {"skate3_native_render_scene_ropa_blend", "false"},
+      {"skate3_native_render_scene_entity_fade", "false"},
+      {"skate3_native_render_scene_lw_fade", "false"},
+      {"skate3_native_render_scene_lw_gap_fill", "false"},
+      {"skate3_native_render_scene_lw_identity", "false"},
+      {"skate3_native_render_scene_lw_palette", "false"},
+      {"skate3_native_render_scene_prewarm_budget_ms", "8"},
+      {"skate3_native_render_scene_occlusion_cull", "true"},
+      {"skate3_native_render_scene_occlusion_cull_build", "true"},
+      {"skate3_native_render_scene_occlusion_cull_guest", "true"},
+  };
   const int32_t android_profile =
-      std::clamp(rex::cvar::Query<int32_t>("skate3_android_quality_profile"), 0, 1);
+      std::clamp(rex::cvar::Query<int32_t>("skate3_android_quality_profile"), 0, 2);
   const auto apply_profile = [](const auto& profile) {
     for (const auto& [name, value] : profile) {
       rex::cvar::SetFlagByName(std::string(name), std::string(value));
@@ -696,11 +755,22 @@ void Skate3BaseApp::OnConfigurePaths(rex::PathConfig& paths) {
     REXLOG_INFO(
         "Android device profile: RG406V / Performance (512x288, 0.5x "
         "world/LOD, simplified materials)");
-  } else {
+  } else if (android_profile == 1) {
     apply_profile(kHighEndPreset);
     REXLOG_INFO(
         "Android device profile: High-End / Quality compatibility baseline "
         "(1280x720 target, verified lean scene feature set)");
+  } else {
+    apply_profile(kCustomBasePreset);
+    REXLOG_INFO(
+        "Android device profile: Custom ({}x{} cap, user-controlled scene "
+        "features; saved settings preserved)",
+        rex::cvar::Query<int32_t>("skate3_android_scene_width_cap") > 0
+            ? rex::cvar::Query<int32_t>("skate3_android_scene_width_cap")
+            : 1280,
+        rex::cvar::Query<int32_t>("skate3_android_scene_height_cap") > 0
+            ? rex::cvar::Query<int32_t>("skate3_android_scene_height_cap")
+            : 720);
   }
 #endif
   Skate3InitializeFieldOfViewOverride();
