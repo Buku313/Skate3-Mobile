@@ -92,9 +92,7 @@ The build uses these methods:
 Reverse engineering in this project uses executable analysis, function and
 shader disassembly, runtime logging, graphics captures, targeted hooks, and
 repeated testing on real hardware. Development and documentation in this fork
-have also been assisted by OpenAI Codex. Buku313 reviewed the changes and
-performed the Android and RG406V build, launch, control, graphics, and gameplay
-testing.
+have also been assisted by OpenAI Codex, with human review and input the whole way through.
 
 The repository does not distribute retail executables, assets, Title Update
 data, or generated game code. Those inputs and generated outputs stay local to
