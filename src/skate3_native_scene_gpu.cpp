@@ -81,6 +81,7 @@ REXCVAR_DECLARE(bool, skate3_native_render_scene_fmv_yield);
 REXCVAR_DECLARE(bool, skate3_native_render_scene_hdr);
 REXCVAR_DECLARE(bool, skate3_native_render_scene_hdr_packed);
 REXCVAR_DECLARE(bool, skate3_native_render_scene_handheld_potato);
+REXCVAR_DECLARE(bool, skate3_native_render_scene_ambient_npcs);
 REXCVAR_DECLARE(bool, skate3_native_render_scene_lightmaps);
 REXCVAR_DECLARE(bool, skate3_native_render_scene_lm_dump);
 REXCVAR_DECLARE(bool, skate3_native_render_scene_loading_native);
@@ -132,6 +133,9 @@ REXCVAR_DECLARE(bool, skate3_native_render_scene_ssao_full_res);
 REXCVAR_DECLARE(bool, skate3_native_render_scene_ssr);
 #if REX_PLATFORM_ANDROID
 REXCVAR_DECLARE(int32_t, skate3_android_quality_profile);
+REXCVAR_DECLARE(int32_t, skate3_android_scene_width_cap);
+REXCVAR_DECLARE(int32_t, skate3_android_scene_height_cap);
+REXCVAR_DECLARE(int32_t, skate3_android_texture_size_cap);
 #endif
 REXCVAR_DECLARE(bool, skate3_native_render_scene_tex_mips);
 REXCVAR_DECLARE(bool, skate3_native_render_scene_tex_revalidate);
@@ -1746,18 +1750,24 @@ bool EnsureGuestTextureFromWords(const NativeGuestOutputRenderContext& context,
 #else
   const bool mobile_bc = false;
 #endif
-  // Mobile BC->RGBA expansion is intentionally quality-capped. Select an
-  // existing guest mip instead of decoding and then downsampling the large
-  // top levels. This keeps the worker cost and resident memory bounded.
+  // Mobile BC->RGBA expansion is quality-capped. Select an existing guest
+  // mip instead of decoding and then downsampling the large top levels. This
+  // keeps the worker cost and resident memory bounded. The cap is a cvar so
+  // devices with memory headroom can trade RGBA8 bytes for sharp art; each
+  // doubling quadruples that texture's resident size (128^2 RGBA8 = 64 KB,
+  // 512^2 = 1 MB) against the tex_store_mb budget.
   uint32_t first_mip = 0;
-  constexpr uint32_t kMobileTextureMax = 128;
+#if REX_PLATFORM_ANDROID
+  const uint32_t mobile_texture_max = uint32_t(
+      std::clamp(REXCVAR_GET(skate3_android_texture_size_cap), 64, 1024));
   if (mobile_bc) {
     while (first_mip + 1 < mip_count &&
-           (std::max(width >> first_mip, 1u) > kMobileTextureMax ||
-            std::max(height >> first_mip, 1u) > kMobileTextureMax)) {
+           (std::max(width >> first_mip, 1u) > mobile_texture_max ||
+            std::max(height >> first_mip, 1u) > mobile_texture_max)) {
       ++first_mip;
     }
   }
+#endif
   // No guest chain at all (runtime-composed lightmap pages): generate one,
   // see UploadGeneratedMips. Small DXT1/8888 textures only; falls back to
   // the plain single-mip path on any failure.
@@ -4316,11 +4326,24 @@ bool EnsureOutputSizedTargets(const NativeGuestOutputRenderContext& context) {
   // Keep the 3D target proportional to the selected native output shape.
   // The RG406V profile retains its 288-line low-power budget (384x288 at
   // 4:3); the high-end profile renders at the full 720-line output
-  // (960x720 at 4:3).
-  const bool high_end_profile =
-      std::clamp(REXCVAR_GET(skate3_android_quality_profile), 0, 1) == 1;
-  const uint32_t width_cap = high_end_profile ? 1280u : 512u;
-  const uint32_t height_cap = high_end_profile ? 720u : 288u;
+  // (960x720 at 4:3). The custom profile reads its caps from the hot-reload
+  // scene-cap cvars (0 = fall back to the 1280x720 box); the dimension
+  // comparison below rebuilds the targets on the next frame after a change.
+  const int32_t android_profile =
+      std::clamp(REXCVAR_GET(skate3_android_quality_profile), 0, 2);
+  uint32_t width_cap = android_profile >= 1 ? 1280u : 512u;
+  uint32_t height_cap = android_profile >= 1 ? 720u : 288u;
+  if (android_profile == 2) {
+    const int32_t custom_width_cap = REXCVAR_GET(skate3_android_scene_width_cap);
+    const int32_t custom_height_cap =
+        REXCVAR_GET(skate3_android_scene_height_cap);
+    if (custom_width_cap > 0) {
+      width_cap = uint32_t(std::clamp(custom_width_cap, 2, 2560));
+    }
+    if (custom_height_cap > 0) {
+      height_cap = uint32_t(std::clamp(custom_height_cap, 2, 1440));
+    }
+  }
   uint32_t height = std::min(context.guest_output_height, height_cap);
   uint32_t width = uint32_t((uint64_t(height) * context.guest_output_width +
                              context.guest_output_height / 2) /
@@ -4954,12 +4977,20 @@ void ProcessPrewarmEntry(uint8_t* base, const PrewarmEntry& e) {
     }
     return;
   }
-  if (REXCVAR_GET(skate3_native_render_scene_handheld_potato)) {
-    const bool drop = item.env_family == 7 || item.env_family == 9 ||
-                      item.env_family == 10 || item.transparent ||
-                      item.env_family == 13 || item.char_family == 3 ||
-                      item.char_family == 6 || item.char_family == 7 ||
-                      item.dynobj != 0;
+  {
+    // Mirrors HandheldPotatoDrops: the potato content cuts, plus the
+    // standalone ambient pedestrians/traffic toggle.
+    const bool potato_on =
+        REXCVAR_GET(skate3_native_render_scene_handheld_potato);
+    const bool ambient_char = item.char_family == 3 ||
+                              item.char_family == 6 || item.char_family == 7;
+    const bool drop =
+        (potato_on &&
+         (item.env_family == 7 || item.env_family == 9 ||
+          item.env_family == 10 || item.transparent ||
+          item.env_family == 13 || ambient_char || item.dynobj != 0)) ||
+        (ambient_char &&
+         !REXCVAR_GET(skate3_native_render_scene_ambient_npcs));
     if (drop) {
       // Count this registration as completed without allocating any GPU
       // buffers or staging textures. The live capture/build path applies
@@ -4970,7 +5001,7 @@ void ProcessPrewarmEntry(uint8_t* base, const PrewarmEntry& e) {
       g_prewarm_out.push_back(std::move(res));
       return;
     }
-    if (item.char_family == 0 && !item.water) {
+    if (potato_on && item.char_family == 0 && !item.water) {
       item.lightmap_tex = 0;
       item.macro_tex = 0;
       item.detail_tex = 0;
@@ -12214,11 +12245,15 @@ void ResetSceneFailure() {
 void Install() {
 #if REX_PLATFORM_ANDROID
   // The app layer applies the selected Android profile after loading saved
-  // settings. Keep the native renderer mandatory on both profiles. Apply the
+  // settings. Keep the native renderer mandatory on all profiles. Apply the
   // conservative duplicate guard whenever the active scene preset is lean,
   // including QA builds that test the Quality resolution with lean features.
+  // The Custom profile (2) is exempt: there handheld_potato and the feature
+  // cvars below are independent user settings, and this blanket force-off
+  // would silently defeat the saved values loaded before this point.
   REXCVAR_SET(skate3_native_render_scene, true);
-  if (REXCVAR_GET(skate3_native_render_scene_handheld_potato)) {
+  if (std::clamp(REXCVAR_GET(skate3_android_quality_profile), 0, 2) != 2 &&
+      REXCVAR_GET(skate3_native_render_scene_handheld_potato)) {
     REXCVAR_SET(skate3_native_render_scene_handheld_potato, true);
     REXCVAR_SET(skate3_native_render_scene_msaa, 1);
     REXCVAR_SET(skate3_native_render_scene_shadows, false);

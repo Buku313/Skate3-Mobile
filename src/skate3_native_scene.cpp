@@ -1246,6 +1246,14 @@ REXCVAR_DEFINE_BOOL(
     "scene fidelity.")
     .lifecycle(rex::cvar::Lifecycle::kHotReload);
 
+REXCVAR_DEFINE_BOOL(
+    skate3_native_render_scene_ambient_npcs, true, "Skate 3",
+    "Draw ambient LivingWorld pedestrians and traffic. Off removes them at "
+    "scene capture, skipping their per-frame palette/world capture cost; "
+    "the player, other skaters and gameplay objects are unaffected and the "
+    "underlying simulation keeps running.")
+    .lifecycle(rex::cvar::Lifecycle::kHotReload);
+
 REXCVAR_DEFINE_INT32(skate3_native_render_scene_perf_interval, 600, "Skate 3",
                      "Frames between native-scene perf/stats log lines. Lower "
                      "values give finer windows for chasing transient frame-"
@@ -2752,6 +2760,14 @@ bool HandheldPotatoEnabled() {
 // publication for statics, so dropped content avoids the expensive scene
 // post-processing and render-side texture/draw work as well.
 bool HandheldPotatoDrops(const DrawItem& item) {
+  // Ambient pedestrians/traffic are a standalone user toggle, independent
+  // of the potato profile. Their simulation continues; only scene capture
+  // (and with it the per-frame palette/world capture cost) is skipped.
+  if ((item.char_family == 3 || item.char_family == 6 ||
+       item.char_family == 7) &&
+      !REXCVAR_GET(skate3_native_render_scene_ambient_npcs)) {
+    return true;
+  }
   if (!HandheldPotatoEnabled()) {
     return false;
   }

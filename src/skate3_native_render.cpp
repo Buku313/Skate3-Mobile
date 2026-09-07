@@ -134,8 +134,11 @@ bool Enabled() { return REXCVAR_GET(skate3_native_render); }
 
 bool ShouldUpdateLivingWorld(uint32_t entity) {
 #if REX_PLATFORM_ANDROID
-  if (Enabled() && REXCVAR_GET(skate3_native_render_scene_handheld_potato) &&
-      !REXCVAR_GET(skate3_mp_enabled)) {
+  // Governed by skate3_native_render_lw_update_refresh alone (1 = every
+  // frame, i.e. original behavior). Not tied to handheld_potato: spreading
+  // ambient LivingWorld updates smooths crowd-induced frame spikes on any
+  // device, including ones running the full scene content.
+  if (Enabled() && !REXCVAR_GET(skate3_mp_enabled)) {
     const int32_t refresh =
         std::clamp(REXCVAR_GET(skate3_native_render_lw_update_refresh), 1, 8);
     if (refresh > 1) {
@@ -192,7 +195,12 @@ void OnSceneDrawList(uint8_t* base, uint32_t view, uint32_t sort_vec, uint32_t f
   // packet builder only needs to refresh them periodically; native capture
   // below still records the complete list on every frame.
 #if REX_PLATFORM_ANDROID
-  if (REXCVAR_GET(skate3_native_render_scene_handheld_potato)) {
+  // Governed by skate3_native_render_guest_static_refresh alone (1 = rebuild
+  // every frame, i.e. original behavior). Not tied to handheld_potato: the
+  // dynamic-context tracking below keeps animated draws refreshing every
+  // frame regardless of scene content, so replaying cached static lists is
+  // a content-independent CPU saving.
+  {
     const int32_t refresh =
         std::clamp(REXCVAR_GET(skate3_native_render_guest_static_refresh), 1, 16);
     if (refresh > 1 && (g_frame_index % uint64_t(refresh)) != 0) {
