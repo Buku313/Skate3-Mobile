@@ -1,4 +1,4 @@
-# SKATE 3 MOBILE
+# SKATE 3 MOBILE, DEV IN PROGRESS!
 
 <p align="center">
   <a href="https://buku313.github.io/Skate3-Mobile/"><strong>OPEN THE SKATE 3 MOBILE WEBSITE</strong></a>
