@@ -1,0 +1,1262 @@
+[
+  {
+    "repo": "engine",
+    "path": "Build Skate 3 Mobile.command",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "CMakeLists.txt",
+    "status": "Adapted / reviewed",
+    "disposition": "Compiled imported engine fixes and required helper files; retained Buku shared-library packaging, naming, Android toolchain and modules."
+  },
+  {
+    "repo": "engine",
+    "path": "CMakePresets.json",
+    "status": "Platform / documentation",
+    "disposition": "Apple packaging, documentation or build/test layout. Buku Android build remains authoritative."
+  },
+  {
+    "repo": "engine",
+    "path": "README.md",
+    "status": "Platform / documentation",
+    "disposition": "Apple packaging, documentation or build/test layout. Buku Android build remains authoritative."
+  },
+  {
+    "repo": "engine",
+    "path": "Setup Build Tools.command",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/README.md",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/build.gradle",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/proguard-rules.pro",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/debug/AndroidManifest.xml",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/AndroidManifest.xml",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/assets/mods/seiyu/base.obj",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/chat/buku/skate3/AppUpdater.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/chat/buku/skate3/BugReporter.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/chat/buku/skate3/BundledMods.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/chat/buku/skate3/CustomGpuDriver.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/chat/buku/skate3/LauncherActivity.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/chat/buku/skate3/LauncherStrings.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/chat/buku/skate3/ModStore.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/chat/buku/skate3/Skate3Activity.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/chat/buku/skate3/TitleUpdateInstaller.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/chat/buku/skate3/TouchControllerBridge.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/chat/buku/skate3/TouchControllerView.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/chat/buku/skate3/UpdateFileProvider.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/chat/buku/skate3/XboxIsoExtractor.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/org/libsdl/app/HIDDevice.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/org/libsdl/app/HIDDeviceManager.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/org/libsdl/app/HIDDeviceUSB.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/org/libsdl/app/SDL.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/org/libsdl/app/SDLActivity.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/org/libsdl/app/SDLAudioManager.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/org/libsdl/app/SDLControllerManager.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/org/libsdl/app/SDLDummyEdit.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/org/libsdl/app/SDLInputConnection.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/java/org/libsdl/app/SDLSurface.java",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/res/values/colors.xml",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/res/values/strings.xml",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/main/res/values/styles.xml",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/app/src/qa/res/values/strings.xml",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/build.gradle",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/gradle.properties",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/gradle/wrapper/gradle-wrapper.properties",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/gradlew",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/gradlew.bat",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/settings.gradle",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "android/tools/build_android_libs.sh",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "build-android.sh",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "cmake/ios/Info.plist.in",
+    "status": "Platform / documentation",
+    "disposition": "Apple packaging, documentation or build/test layout. Buku Android build remains authoritative."
+  },
+  {
+    "repo": "engine",
+    "path": "cmake/ios/icon/make_icon.py",
+    "status": "Platform / documentation",
+    "disposition": "Apple packaging, documentation or build/test layout. Buku Android build remains authoritative."
+  },
+  {
+    "repo": "engine",
+    "path": "cmake/ios/skate3.entitlements",
+    "status": "Platform / documentation",
+    "disposition": "Apple packaging, documentation or build/test layout. Buku Android build remains authoritative."
+  },
+  {
+    "repo": "engine",
+    "path": "cmake/macos/Info.plist.in",
+    "status": "Platform / documentation",
+    "disposition": "Apple packaging, documentation or build/test layout. Buku Android build remains authoritative."
+  },
+  {
+    "repo": "engine",
+    "path": "cmake/macos/StageBundle.cmake",
+    "status": "Platform / documentation",
+    "disposition": "Apple packaging, documentation or build/test layout. Buku Android build remains authoritative."
+  },
+  {
+    "repo": "engine",
+    "path": "mods/seiyu/README.txt",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "mods/seiyu/base.obj",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_android_bridge.cpp",
+    "status": "Equivalent existing Android path",
+    "disposition": "Buku Java launcher already owns SAF import, extraction and title-update download. Andrew native/iOS installer UI was not transplanted."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_android_bridge.h",
+    "status": "Equivalent existing Android path",
+    "disposition": "Buku Java launcher already owns SAF import, extraction and title-update download. Andrew native/iOS installer UI was not transplanted."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_app_common.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Adapted bootstrap defaults, diagnostic/hook installation, low-memory callbacks, executable verification, and Quality settings precedence. Retained Buku launcher, paths, mods and profile system."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_app_common.h",
+    "status": "Adapted / reviewed",
+    "disposition": "Retained Buku app contract; Andrew additions declare the new content picker, performance page, loader and native touch overlays, not gameplay fixes."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_audio_fixes.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_crash_report.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_crash_report.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_demo_path.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Imported macro confirmation/progress and optional boot timer support. Retained Buku boot-only movie watchdog. New level-picker callback is not installed."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_demo_path.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_diagnostics.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_diagnostics.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_draw_distance.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Andrew scale default adapted to Android 1.0; includes LivingWorld refresh configuration."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_guest_trace.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_guest_trace.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_heap_check.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_image_watch.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_image_watch.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_iso_installer.cpp",
+    "status": "Equivalent existing Android path",
+    "disposition": "Buku Java launcher already owns SAF import, extraction and title-update download. Andrew native/iOS installer UI was not transplanted."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_iso_installer.h",
+    "status": "Equivalent existing Android path",
+    "disposition": "Buku Java launcher already owns SAF import, extraction and title-update download. Andrew native/iOS installer UI was not transplanted."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_iso_installer_ios.mm",
+    "status": "Equivalent existing Android path",
+    "disposition": "Buku Java launcher already owns SAF import, extraction and title-update download. Andrew native/iOS installer UI was not transplanted."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_loader_overlay.cpp",
+    "status": "Separate feature",
+    "disposition": "New content/level picker, touch overlay or performance UI, not a fix to Buku gameplay. Existing Buku equivalents remain."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_loader_overlay.h",
+    "status": "Separate feature",
+    "disposition": "New content/level picker, touch overlay or performance UI, not a fix to Buku gameplay. Existing Buku equivalents remain."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_mp.cpp",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_mp.h",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_native_render.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Imported render/guest dispatch, instance retirement and diagnostics. Retained Buku multiplayer and Performance-only reductions. Omitted new level-picker pointer publication."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_native_scene.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Imported scene fixes; Quality now follows Andrew cache refresh intervals and refreshes static geometry every frame. Retained bounded 2D capture, 4:3 support, mods and explicitly gated Performance reductions."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_native_scene.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_native_scene_gpu.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Imported texture decode, format probing, descriptor/layout, pipeline, scene, lifetime and post changes as a unit. Retained Buku aspect/mod integration and bounded FMV fallback. Quality uses native boot/FMV/portrait paths, full refresh, and HDR."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_native_scene_gpu_internal.h",
+    "status": "Adapted",
+    "disposition": "Matching integration or platform/header/build adaptation; preserved Buku-only interfaces. See final diff and source hash manifest."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_native_scene_post.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_native_scene_state.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_pack_select.cpp",
+    "status": "Separate feature",
+    "disposition": "New content/level picker, touch overlay or performance UI, not a fix to Buku gameplay. Existing Buku equivalents remain."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_pack_select.h",
+    "status": "Separate feature",
+    "disposition": "New content/level picker, touch overlay or performance UI, not a fix to Buku gameplay. Existing Buku equivalents remain."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_penguin_mod.cpp",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_penguin_mod.h",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_performance_profile.cpp",
+    "status": "Separate feature",
+    "disposition": "New content/level picker, touch overlay or performance UI, not a fix to Buku gameplay. Existing Buku equivalents remain."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_performance_profile.h",
+    "status": "Separate feature",
+    "disposition": "New content/level picker, touch overlay or performance UI, not a fix to Buku gameplay. Existing Buku equivalents remain."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_title_update_installer.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Imported base-executable hash verification. Native Android install UI/download replacement not used: Buku already uses its Java SAF extractor and downloader."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_title_update_installer.h",
+    "status": "Adapted / reviewed",
+    "disposition": "Added executable verification declaration; retained Buku Java installer contract."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_touch_controls.cpp",
+    "status": "Separate feature",
+    "disposition": "New content/level picker, touch overlay or performance UI, not a fix to Buku gameplay. Existing Buku equivalents remain."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_touch_controls.h",
+    "status": "Separate feature",
+    "disposition": "New content/level picker, touch overlay or performance UI, not a fix to Buku gameplay. Existing Buku equivalents remain."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_warp.cpp",
+    "status": "Separate feature",
+    "disposition": "New content/level picker, touch overlay or performance UI, not a fix to Buku gameplay. Existing Buku equivalents remain."
+  },
+  {
+    "repo": "engine",
+    "path": "src/skate3_warp.h",
+    "status": "Separate feature",
+    "disposition": "New content/level picker, touch overlay or performance UI, not a fix to Buku gameplay. Existing Buku equivalents remain."
+  },
+  {
+    "repo": "runtime",
+    "path": "CMakeLists.txt",
+    "status": "Build adaptation",
+    "disposition": "Kept Buku Android target/dependency layout; added needed sources and SPIRV-Tools-opt link where consumed."
+  },
+  {
+    "repo": "runtime",
+    "path": "cmake/rexglue_helpers.cmake",
+    "status": "Build adaptation",
+    "disposition": "Kept Buku Android target/dependency layout; added needed sources and SPIRV-Tools-opt link where consumed."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/atomic_ref.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/audio/xma/context.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/cvar.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/execinfo_android.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/filesystem/host_buffer_fault_hook.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/graphics/command_processor.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/graphics/graphics_system.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/graphics/native_guest_renderer.h",
+    "status": "Buku API retained",
+    "disposition": "Retains narrow plus wide aspect API; corresponding Vulkan callers adapted. Andrew shape is wide-only."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/graphics/native_rhi.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/graphics/pipeline/shader/spirv_translator.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/graphics/trace_writer.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/graphics/vulkan/command_processor.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/graphics/vulkan/shared_memory.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/input/input_system.h",
+    "status": "Separate input features",
+    "disposition": "Additional tuning, level/performance chords and native touch driver; defaults are no-op. Existing Buku physical/touch input retained; controller-adoption fix ported separately."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/input/sdl/sdl_input_driver.h",
+    "status": "Separate input features",
+    "disposition": "Additional tuning, level/performance chords and native touch driver; defaults are no-op. Existing Buku physical/touch input retained; controller-adoption fix ported separately."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/input/touch_input_driver.h",
+    "status": "Separate input features",
+    "disposition": "Additional tuning, level/performance chords and native touch driver; defaults are no-op. Existing Buku physical/touch input retained; controller-adoption fix ported separately."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/kernel/xam/input_injection.h",
+    "status": "Adapted / reviewed",
+    "disposition": "Buku stop-after-boot API retained; compatible with rotated taps."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/main_android.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/platform.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/platform/dynlib.h",
+    "status": "Buku API retained",
+    "disposition": "Adopt support needed by existing Buku custom loader; Andrew omits it."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/system/kernel_state.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/system/xthread.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/system/xtypes.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/thread/fiber.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/ui/overlay/acquire_wizard_overlay.h",
+    "status": "Separate installer UI",
+    "disposition": "Installer orientation/content-pack UI for Andrew native setup; Buku Android uses Java setup."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/ui/overlay/install_wizard_overlay.h",
+    "status": "Separate installer UI",
+    "disposition": "Installer orientation/content-pack UI for Andrew native setup; Buku Android uses Java setup."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/ui/overlay/simple_settings_overlay.h",
+    "status": "Adapted / reviewed",
+    "disposition": "Matching persistence/gesture state; retained Buku menu contract."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/ui/presenter.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/ui/surface_android.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/ui/vulkan/device.h",
+    "status": "Adapted / reviewed",
+    "disposition": "Matching device feature support with corrected device-limit comment."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/ui/vulkan/functions/device_1_0.inc",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/ui/vulkan/presenter.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/ui/vulkan/util.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/ui/window.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/ui/window_gtk.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/ui/window_sdl.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/ui/windowed_app.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "include/rex/ui/windowed_app_context_sdl.h",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "resources/templates/codegen/init_h.inja",
+    "status": "Adapted / reviewed",
+    "disposition": "Not imported: optional non-volatile guest-memory performance experiment is not a correctness fix and can hoist unfenced guest polling loops. Kept volatile generated accesses and existing barrier semantics."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/audio/sdl/sdl_audio_driver.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Imported pacing/conversion/device behavior; Android stereo and periodic diagnostic defaults retained. Test config explicitly uses Andrew 512-frame request."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/audio/xma_context.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/audio/xma_decoder.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/core/CMakeLists.txt",
+    "status": "Adapted",
+    "disposition": "Matching integration or platform/header/build adaptation; preserved Buku-only interfaces. See final diff and source hash manifest."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/core/cvar.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/core/dynlib_posix.cpp",
+    "status": "Buku API retained",
+    "disposition": "Adopt support needed by existing Buku custom loader; Andrew omits it."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/core/dynlib_win.cpp",
+    "status": "Buku API retained",
+    "disposition": "Adopt support needed by existing Buku custom loader; Andrew omits it."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/core/execinfo_android.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/core/fiber_aarch64.S",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/core/fiber_aarch64.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/core/fiber_android.cpp",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/core/fiber_posix.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/core/filesystem_android.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/core/filesystem_posix.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/core/logging.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/core/main_android.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/core/memory_posix.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Retained Buku Android memfd fallback and page alignment. Andrew-only remaining additions concern iOS backing files; no Android fix dropped."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/core/threading_posix.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Imported startup, per-handle WaitAny and affinity fixes. Restored completion notification through NotifyWaitAny after regression test detected the imported exit path omitted it."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/graphics/command_processor.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/graphics/d3d12/command_processor.cpp",
+    "status": "Buku API retained",
+    "disposition": "Retains narrow plus wide aspect API; corresponding Vulkan callers adapted. Andrew shape is wide-only."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/graphics/d3d12/native_rhi_d3d12.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/graphics/flags.cpp",
+    "status": "Buku Android default retained",
+    "disposition": "Xenos native_2x_msaa remains disabled on Android; distinct from selectable native-scene MSAA. No code fix in this diff."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/graphics/graphics_system.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/graphics/native_guest_renderer.cpp",
+    "status": "Buku API retained",
+    "disposition": "Retains narrow plus wide aspect API; corresponding Vulkan callers adapted. Andrew shape is wide-only."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/graphics/trace_writer.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/graphics/vulkan/command_processor.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Imported wait/readback/lifecycle changes and adapted aspect API to Buku narrow/wide support."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/graphics/vulkan/native_rhi_vulkan.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Imported coherent packed layouts, remapping/binding, format queries, resource/cache fixes. Added joining of pipeline-cache writer at teardown and full final retirement drain."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/graphics/vulkan/shared_memory.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Imported sharing/lifetime changes; retained Qualcomm sparse-residency workaround."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/input/CMakeLists.txt",
+    "status": "Separate input features",
+    "disposition": "Additional tuning, level/performance chords and native touch driver; defaults are no-op. Existing Buku physical/touch input retained; controller-adoption fix ported separately."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/input/input_system.cpp",
+    "status": "Separate input features",
+    "disposition": "Additional tuning, level/performance chords and native touch driver; defaults are no-op. Existing Buku physical/touch input retained; controller-adoption fix ported separately."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/input/sdl/sdl_input_driver.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Imported adoption of already-attached controllers. Preserved Buku Android events, raw-joystick button bridge and Java touch input."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/input/touch/touch_input_driver.cpp",
+    "status": "Separate input features",
+    "disposition": "Additional tuning, level/performance chords and native touch driver; defaults are no-op. Existing Buku physical/touch input retained; controller-adoption fix ported separately."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/kernel/xam/apps/xgi_app.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/kernel/xam/xam_content.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/kernel/xam/xam_content_device.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/kernel/xam/xam_info.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/kernel/xam/xam_input.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Imported rotating START/A auto-taps; retained Buku permanent stop-after-gameplay guard and button diagnostics."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/kernel/xam/xam_msg.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/kernel/xam/xam_ui.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/kernel/xam/xam_user.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/kernel/xboxkrnl/xboxkrnl_audio_xma.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/kernel/xboxkrnl/xboxkrnl_rtl.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/kernel/xboxkrnl/xboxkrnl_video.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/system/CMakeLists.txt",
+    "status": "Build adaptation",
+    "disposition": "Kept Buku Android target/dependency layout; added needed sources and SPIRV-Tools-opt link where consumed."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/system/function_dispatcher.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Adapted bounded invalid-call behavior and interrupt TLS restoration; retained validated Buku recovery paths. Did not import unvalidated stack-unwind recovery heuristics."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/system/kernel_state.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/system/lzx.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/system/xex_module.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Imported module-local release, hashing and diagnostics; retained two Buku overlap-safe memmoves. Whole-heap Reset is removed from image loading."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/system/xmemory.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Retained Buku reservation-before-MAP_FIXED on Android to avoid overwriting other mappings. Remaining Andrew diagnostics target Apple virtual-address limits."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/system/xthread.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/ui/CMakeLists.txt",
+    "status": "Adapted",
+    "disposition": "Matching integration or platform/header/build adaptation; preserved Buku-only interfaces. See final diff and source hash manifest."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/ui/imgui_drawer.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Only comments differ; both builds disable unavailable patched-imgui RasterizerGamma fields."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/ui/overlay/acquire_wizard_overlay.cpp",
+    "status": "Separate installer UI",
+    "disposition": "Installer orientation/content-pack UI for Andrew native setup; Buku Android uses Java setup."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/ui/overlay/install_wizard_overlay.cpp",
+    "status": "Separate installer UI",
+    "disposition": "Installer orientation/content-pack UI for Andrew native setup; Buku Android uses Java setup."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/ui/overlay/simple_settings_overlay.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Imported save-on-close, debounced save, and touch drag/release fixes. Retained Buku categories, device profile and 4:3. New performance/level-picker/touch-customization pages and apply-confirmation redesign are separate UI features."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/ui/overlay/wizard_screen.cpp",
+    "status": "Separate installer UI",
+    "disposition": "Installer orientation/content-pack UI for Andrew native setup; Buku Android uses Java setup."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/ui/overlay/wizard_screen.h",
+    "status": "Separate installer UI",
+    "disposition": "Installer orientation/content-pack UI for Andrew native setup; Buku Android uses Java setup."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/ui/presenter.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/ui/rex_app.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Imported setup-failure dialog, build-identifying logging and resume result diagnostics. Kept Android user-root paths. Guest slow-motion diagnostic and Apple support logging not required for Android correctness."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/ui/surface_android.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/ui/vulkan/vulkan_device.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Imported Vulkan feature/layout fixes, adapted Android capability defaults. Uses queried device limits."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/ui/vulkan/vulkan_instance.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Retained existing Buku driver-loading support. Andrew differences here are Apple loader/bundle/iOS paths; no Android bug fix omitted."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/ui/vulkan/vulkan_presenter.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/ui/vulkan/vulkan_submission_tracker.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/ui/vulkan/vulkan_util.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/ui/window.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/ui/window_gtk.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/ui/window_sdl.cpp",
+    "status": "Matches reference",
+    "disposition": "Current contents match the inspected Andrew source."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/ui/windowed_app_context_sdl.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Imported foreground/low-memory/lifecycle behavior; retained Buku 8 ms Android event polling for joystick delivery."
+  },
+  {
+    "repo": "runtime",
+    "path": "src/ui/windowed_app_main_sdl.cpp",
+    "status": "Adapted / reviewed",
+    "disposition": "Imported Android subsystem init/shutdown. Bootstrap settings moved into engine defaults helper before saved settings. Retained Buku Java launcher and SDL event-pump flow; omitted standalone/iOS launchers and new content picker."
+  },
+  {
+    "repo": "runtime",
+    "path": "tests/unit/CMakeLists.txt",
+    "status": "Platform / documentation",
+    "disposition": "Apple packaging, documentation or build/test layout. Buku Android build remains authoritative."
+  },
+  {
+    "repo": "runtime",
+    "path": "tests/unit/system/lzx_delta_patch_test.cpp",
+    "status": "Buku-only retained",
+    "disposition": "Buku launcher, packaging, assets or existing features; not an Andrew omission."
+  }
+]
