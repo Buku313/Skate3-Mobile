@@ -1,4 +1,9 @@
 #include "skate3_app_common.h"
+#include "skate3_android_defaults.h"
+#include "skate3_crash_report.h"
+#include "skate3_image_watch.h"
+#include "skate3_guest_trace.h"
+#include "skate3_diagnostics.h"
 
 #include "skate3_demo_path.h"
 #include "skate3_fov.h"
@@ -73,6 +78,7 @@
 
 #if defined(__ANDROID__)
 #include <SDL3/SDL_system.h>
+#include <rex/ui/windowed_app_context_sdl.h>
 #endif
 
 #if defined(__linux__) || defined(__APPLE__)
@@ -580,6 +586,7 @@ void Skate3BaseApp::OnConfigurePaths(rex::PathConfig& paths) {
 #endif
   ConfigureSkate3UserPaths(paths, user_settings_path_, profiles_path_);
   config_path_ = paths.config_path;
+  ApplySkate3AndroidDefaults();
   LoadAndNormalizeSimpleSettings(user_settings_path_, config_path_);
 #if defined(__ANDROID__)
   // Resolve optional mod assets from the active game root so both scoped
@@ -596,10 +603,8 @@ void Skate3BaseApp::OnConfigurePaths(rex::PathConfig& paths) {
   rex::cvar::SetFlagByName("draw_resolution_scale_x", "1");
   rex::cvar::SetFlagByName("draw_resolution_scale_y", "1");
 
-  // Apply a coherent profile after loading settings. The performance profile
-  // keeps the known-good RG406V budget. During the QA 4 isolation test, the
-  // quality profile uses the same lean scene configuration while selecting
-  // its separate 720p scene target inside the renderer.
+  // Performance remains an explicit reduced-feature profile. Quality uses
+  // the regular renderer and the saved settings loaded above.
   constexpr std::pair<std::string_view, std::string_view> kPerformancePreset[] = {
       {"skate3_native_render_scene_handheld_potato", "true"},
       {"native_render_suppress_mode", "1"},
@@ -638,52 +643,6 @@ void Skate3BaseApp::OnConfigurePaths(rex::PathConfig& paths) {
       {"skate3_native_render_scene_perf_interval", "300"},
       {"show_fps_counter", "true"},
   };
-  constexpr std::pair<std::string_view, std::string_view> kHighEndPreset[] = {
-      // QA compatibility baseline: use the exact scene feature set already
-      // proven on the RP5 Performance profile while the renderer selects the
-      // Quality profile's 720-line target. QA 3 removed the unsafe world
-      // stream probe but the RP5 still produced audio behind a black native
-      // frame before any gameplay/pipeline-success line. Isolating resolution
-      // from content/pipeline expansion lets device testing identify whether
-      // the 720p target itself is safe before features return in small groups.
-      {"skate3_native_render_scene_handheld_potato", "true"},
-      {"native_render_suppress_mode", "1"},
-      {"skate3_native_render_guest_static_refresh", "8"},
-      {"skate3_native_render_lw_update_refresh", "1"},
-      {"skate3_draw_distance_scale", "0.5"},
-      {"skate3_lod_distance_scale", "0.5"},
-      {"skate3_draw_distance_stream_probe", "0"},
-      {"skate3_native_render_scene_msaa", "1"},
-      {"skate3_native_render_scene_shadows", "false"},
-      {"skate3_native_render_scene_shadow_static_casters", "false"},
-      {"skate3_native_render_scene_shadow_pcss", "false"},
-      {"skate3_native_render_scene_ssao", "false"},
-      {"skate3_native_render_scene_ssr", "false"},
-      {"skate3_native_render_scene_hdr", "false"},
-      {"skate3_native_render_scene_bloom", "false"},
-      {"skate3_native_render_scene_shafts", "false"},
-      {"skate3_native_render_scene_haze", "false"},
-      {"skate3_native_render_scene_smooth_camera", "false"},
-      {"skate3_native_render_scene_selection_outline", "false"},
-      {"skate3_native_render_scene_lightmaps", "false"},
-      {"skate3_native_render_scene_macro", "false"},
-      {"skate3_native_render_scene_decals", "false"},
-      {"skate3_native_render_scene_sort_opaque", "false"},
-      {"skate3_native_render_scene_splines", "false"},
-      {"skate3_native_render_scene_ropa_blend", "false"},
-      {"skate3_native_render_scene_entity_fade", "false"},
-      {"skate3_native_render_scene_lw_fade", "false"},
-      {"skate3_native_render_scene_lw_gap_fill", "false"},
-      {"skate3_native_render_scene_lw_identity", "false"},
-      {"skate3_native_render_scene_lw_palette", "false"},
-      {"skate3_native_render_scene_prewarm_budget_ms", "8"},
-      {"skate3_native_render_scene_occlusion_cull", "true"},
-      {"skate3_native_render_scene_occlusion_cull_build", "true"},
-      {"skate3_native_render_scene_occlusion_cull_guest", "true"},
-      {"skate3_native_render_scene_perf_log", "false"},
-      {"skate3_native_render_scene_perf_interval", "300"},
-      {"show_fps_counter", "false"},
-  };
   const int32_t android_profile =
       std::clamp(rex::cvar::Query<int32_t>("skate3_android_quality_profile"), 0, 1);
   const auto apply_profile = [](const auto& profile) {
@@ -697,10 +656,8 @@ void Skate3BaseApp::OnConfigurePaths(rex::PathConfig& paths) {
         "Android device profile: RG406V / Performance (512x288, 0.5x "
         "world/LOD, simplified materials)");
   } else {
-    apply_profile(kHighEndPreset);
-    REXLOG_INFO(
-        "Android device profile: High-End / Quality compatibility baseline "
-        "(1280x720 target, verified lean scene feature set)");
+    rex::cvar::SetFlagByName("skate3_native_render_scene_handheld_potato", "false");
+    REXLOG_INFO("Android device profile: High-End / Quality (1280x720, regular materials, saved settings)");
   }
 #endif
   Skate3InitializeFieldOfViewOverride();
@@ -845,6 +802,7 @@ std::optional<rex::PathConfig> Skate3BaseApp::OnFinalizePaths(
     runtime_paths = std::move(tu_paths);
   }
 #endif
+  skate3::VerifyBaseExecutable(runtime_paths.game_data_root);
 #if defined(_WIN32)
   // Window/taskbar + Explorer icon sourced from the user's OWN game art at
   // runtime (game/nxeart); the shipped exe and the repo carry no EA
@@ -926,6 +884,17 @@ void Skate3BaseApp::OnCreateDialogs(rex::ui::ImGuiDrawer* drawer) {
 }
 
 void Skate3BaseApp::OnPostSetup() {
+  skate3::crash_report::StartWatchdogEarly();
+  skate3::image_watch::Install();
+  skate3::InstallDiagnosticsSwitch();
+#if defined(__ANDROID__)
+  if (auto* sdl_context = dynamic_cast<rex::ui::SDLWindowedAppContext*>(&app_context())) {
+    sdl_context->SetLowMemoryHandler([]() {
+      skate3::native_scene::FlushTextureCache();
+      skate3::native_scene::FlushMeshCache();
+    });
+  }
+#endif
   skate3::shader_disasm::RunIfRequested();
   skate3::mp::Start();
   ApplySelectedProfileToRuntime();
@@ -981,6 +950,8 @@ void Skate3BaseApp::OnPostSetup() {
   auto* dispatcher = runtime()->function_dispatcher();
   skate3::native_render::Install();
   skate3::demo_path::InstallHooks(dispatcher);
+  skate3::guest_trace::Install();
+  skate3::guest_trace::InstallSampler();
   // User-facing intro-movie skip (independent of the demo path): the movie
   // completion override polls the merged UI pad state through this provider.
   skate3::demo_path::SetUiInputProvider([this]() {

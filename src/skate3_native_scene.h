@@ -522,6 +522,17 @@ bool FreecamGuestPose(float out_pos[3]);
 // context reports true (the conservative side).
 bool LoadingOrFrontendActive();
 
+// Sentinel for "the frontend stack is empty, or has not been read yet".
+constexpr uint32_t kFrontEndStackEmpty = 0xFFFFFFFFu;
+
+// Screen id on top of the frontend's push-state stack, refreshed every frame.
+// Known ids: 0 = FE root, 15 = CAS, 17 = pause challenge map, 24 = FMV,
+// 47 = language select, 56 = pause root, 59 = skate reel, 63 = team.
+//
+// The boot macro uses this to confirm its `start` press actually opened the
+// pause menu rather than trusting a fixed delay after the gameplay context.
+uint32_t FrontEndTopScreen();
+
 // The game's per-entity spawn/streaming fade as carried by the item's
 // validated character-lighting capture (peds c21.x, defaultcharacter c13.x,
 // cacstamp c22.x, vehicle body c20.x, hair strand scale). 1.0 for items

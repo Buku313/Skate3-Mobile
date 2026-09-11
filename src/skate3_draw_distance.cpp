@@ -56,12 +56,19 @@
 #include <windows.h>
 #endif
 
+REXCVAR_DEFINE_BOOL(skate3_stream_descriptor_prune, true, "Skate 3",
+                    "Prune dead stream descriptors from the guest's focus array in "
+                    "tStreamFocus::ProcessEntries (see the hook). This REWRITES A GUEST "
+                    "ARRAY IN PLACE and shortens its count, on the load thread, exactly "
+                    "during level transitions - the window where the intermittent map-load "
+                    "crash happens. Off = leave the guest array alone, to test whether the "
+                    "workaround is itself the corruption.")
+    .lifecycle(rex::cvar::Lifecycle::kHotReload);
 #if defined(__ANDROID__)
-constexpr double kDefaultDrawDistanceScale = 0.5;
+constexpr double kDefaultDrawDistanceScale = 1.0;
 #else
 constexpr double kDefaultDrawDistanceScale = 2.0;
 #endif
-
 REXCVAR_DEFINE_DOUBLE(skate3_draw_distance_scale, kDefaultDrawDistanceScale, "Skate 3",
                       "Scale the distance at which small world meshes "
                       "(foliage, props, street furniture) stop being drawn. "
@@ -672,7 +679,7 @@ extern "C" REX_FUNC(sub_8247B3A0) {
 // the focus critical section held by the caller.
 extern "C" REX_FUNC(sub_8247DCF0) {
   const uint32_t focus = ctx.r3.u32;
-  if (PlausibleGuestAddr(focus)) {
+  if (REXCVAR_GET(skate3_stream_descriptor_prune) && PlausibleGuestAddr(focus)) {
     const uint32_t count = LoadGuestU32(base, focus + 1400);
     if (count <= 64) {
       uint32_t kept = 0;

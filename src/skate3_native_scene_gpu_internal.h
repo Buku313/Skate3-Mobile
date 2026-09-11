@@ -388,27 +388,95 @@ struct HostTextureFormat {
   uint32_t host_swizzle = xenos::XE_GPU_TEXTURE_SWIZZLE_RGBA;
 };
 
+// True where the GPU has no BC/S3TC support and the guest's DXT blocks have to
+// be expanded on the CPU before upload. Where the GPU does not support them,
+// vkCreateImage returns VK_ERROR_FORMAT_NOT_SUPPORTED and MoltenVK then passes
+// Metal pixelFormat 0, which asserts inside the driver rather than failing
+// gracefully - so this must be right before the first upload, not discovered.
+//
+// This used to be a compile-time `true` on iOS, on the premise that Metal
+// exposes BC only on Mac-class GPUs. That has not been true since iOS 16.4:
+// A-series GPUs from the A15 answer MTLDevice.supportsBCTextureCompression,
+// and MoltenVK gates its BC formats on exactly that. The premise cost 8x on
+// every DXT1 surface, because the alternative to sampling a 4bpp block is
+// storing a 32bpp expansion of it - which is most of why the texture store
+// runs into its budget and evicts continuously.
+//
+// So ask the device instead. Resolved once, from the render thread, before any
+// texture is uploaded; every caller reads the resolved answer.
+bool DecodeBcOnCpu();
+
+// Asks the device which BC formats it can sample and latches the answer.
+// Safe to call every frame; only the first call with a device does work.
+// Also latches DecodeDxt1To565.
+void ResolveBcSupport(nrhi::Device* device);
+
+// True where a DXT1 texture being expanded on the CPU should be expanded to
+// 16bpp RGB565 rather than 32bpp RGBA8. A DXT1 block's endpoints ARE RGB565,
+// so for a block in the four-colour mode this costs only the precision of the
+// two interpolated colours - and halves the largest texture class on a device
+// that has to store 4bpp source as an expansion.
+//
+// It cannot be decided from the format alone. A block whose c0 <= c1 is in the
+// three-colour punch-out mode, where index 3 means TRANSPARENT, and the game
+// leans on that alpha: scene.hlsl alpha-tests foliage and fence cards with it
+// and clips shadow casters against it. So the decision is per texture, taken
+// after the guest blocks have been copied - see Dxt1ChainUsesPunchOut.
+bool DecodeDxt1To565();
+
+// The uncompressed stand-in each BC format decodes to. Kept next to
+// GetHostTextureFormat so the two cannot drift apart.
+inline bool IsBcGuestFormat(xenos::TextureFormat format) {
+  switch (rex::graphics::GetBaseFormat(format)) {
+    case xenos::TextureFormat::k_DXT1:
+    case xenos::TextureFormat::k_DXT2_3:
+    case xenos::TextureFormat::k_DXT4_5:
+    case xenos::TextureFormat::k_DXT5A:
+    case xenos::TextureFormat::k_DXN:
+      return true;
+    default:
+      return false;
+  }
+}
+
 inline bool GetHostTextureFormat(xenos::TextureFormat format, HostTextureFormat& out) {
   switch (rex::graphics::GetBaseFormat(format)) {
     case xenos::TextureFormat::k_DXT1:
-      out = {nrhi::Format::kBC1_UNORM, nrhi::Format::kBC1_UNORM,
-             xenos::XE_GPU_TEXTURE_SWIZZLE_RGBA};
+      out = DecodeBcOnCpu() ? HostTextureFormat{nrhi::Format::kR8G8B8A8_UNORM,
+                                               nrhi::Format::kR8G8B8A8_UNORM,
+                                               xenos::XE_GPU_TEXTURE_SWIZZLE_RGBA}
+                           : HostTextureFormat{nrhi::Format::kBC1_UNORM, nrhi::Format::kBC1_UNORM,
+                                               xenos::XE_GPU_TEXTURE_SWIZZLE_RGBA};
       return true;
     case xenos::TextureFormat::k_DXT2_3:
-      out = {nrhi::Format::kBC2_UNORM, nrhi::Format::kBC2_UNORM,
-             xenos::XE_GPU_TEXTURE_SWIZZLE_RGBA};
+      out = DecodeBcOnCpu() ? HostTextureFormat{nrhi::Format::kR8G8B8A8_UNORM,
+                                               nrhi::Format::kR8G8B8A8_UNORM,
+                                               xenos::XE_GPU_TEXTURE_SWIZZLE_RGBA}
+                           : HostTextureFormat{nrhi::Format::kBC2_UNORM, nrhi::Format::kBC2_UNORM,
+                                               xenos::XE_GPU_TEXTURE_SWIZZLE_RGBA};
       return true;
     case xenos::TextureFormat::k_DXT4_5:
-      out = {nrhi::Format::kBC3_UNORM, nrhi::Format::kBC3_UNORM,
-             xenos::XE_GPU_TEXTURE_SWIZZLE_RGBA};
+      out = DecodeBcOnCpu() ? HostTextureFormat{nrhi::Format::kR8G8B8A8_UNORM,
+                                               nrhi::Format::kR8G8B8A8_UNORM,
+                                               xenos::XE_GPU_TEXTURE_SWIZZLE_RGBA}
+                           : HostTextureFormat{nrhi::Format::kBC3_UNORM, nrhi::Format::kBC3_UNORM,
+                                               xenos::XE_GPU_TEXTURE_SWIZZLE_RGBA};
       return true;
     case xenos::TextureFormat::k_DXT5A:
-      out = {nrhi::Format::kBC4_UNORM, nrhi::Format::kBC4_UNORM,
-             xenos::XE_GPU_TEXTURE_SWIZZLE_RRRR};
+      // BC4 decodes to a single 8-bit channel; the RRRR view swizzle that
+      // follows broadcasts it exactly as the compressed form did.
+      out = DecodeBcOnCpu()
+                ? HostTextureFormat{nrhi::Format::kR8_UNORM, nrhi::Format::kR8_UNORM,
+                                    xenos::XE_GPU_TEXTURE_SWIZZLE_RRRR}
+                : HostTextureFormat{nrhi::Format::kBC4_UNORM, nrhi::Format::kBC4_UNORM,
+                                    xenos::XE_GPU_TEXTURE_SWIZZLE_RRRR};
       return true;
     case xenos::TextureFormat::k_DXN:
-      out = {nrhi::Format::kBC5_UNORM, nrhi::Format::kBC5_UNORM,
-             xenos::XE_GPU_TEXTURE_SWIZZLE_RGGG};
+      out = DecodeBcOnCpu()
+                ? HostTextureFormat{nrhi::Format::kR8G8_UNORM, nrhi::Format::kR8G8_UNORM,
+                                    xenos::XE_GPU_TEXTURE_SWIZZLE_RGGG}
+                : HostTextureFormat{nrhi::Format::kBC5_UNORM, nrhi::Format::kBC5_UNORM,
+                                    xenos::XE_GPU_TEXTURE_SWIZZLE_RGGG};
       return true;
     case xenos::TextureFormat::k_8_8_8_8:
       out = {nrhi::Format::kR8G8B8A8_UNORM, nrhi::Format::kR8G8B8A8_UNORM,
@@ -597,6 +665,16 @@ struct RendererState {
   uint32_t pfx_width = 0, pfx_height = 0;
   bool pfx_ready = false;
   bool pfx_failed = false;
+  // How many of the nine photo-fx PSOs are built. The family is compiled a
+  // little at a time rather than all in one call: on MoltenVK each entry is a
+  // SPIR-V -> MSL -> Metal compile of a pixel shader shared with nothing else
+  // in the renderer, so building all nine at once is a multi-second stall on
+  // whichever thread asked. Reset wherever pfx_ready is cleared.
+  uint32_t pfx_built = 0;
+  // The guest-output format entries 6 and 8 (ps_fisheye, ps_pfx_debug) were
+  // compiled against. Constant in practice today, but the family is now built
+  // long before it is used, so the assumption is latched rather than trusted.
+  nrhi::Format pfx_rtv_format = nrhi::Format::kUnknown;
   // Screen-space ambient occlusion (ssao.hlsl: GTAO over the resolved
   // scene; see ApplySsaoPass). Own binding layout: root constants b0 + two
   // single-texture tables t0/t1 + point/linear clamp samplers. Full-res
@@ -1055,7 +1133,8 @@ bool Ensure2dPso(const NativeGuestOutputRenderContext& context);
 bool EnsureSplinePsos(const NativeGuestOutputRenderContext& context);
 bool EnsureShadowPsos(const NativeGuestOutputRenderContext& context);
 bool EnsureHeapsAndRings(const NativeGuestOutputRenderContext& context);
-bool EnsurePhotoFxPipeline(const NativeGuestOutputRenderContext& context);
+bool EnsurePhotoFxPipeline(const NativeGuestOutputRenderContext& context,
+                           uint32_t budget_ms);
 bool EnsureShadowResources(const NativeGuestOutputRenderContext& context);
 bool EnsureBlurOutlineTargets(const NativeGuestOutputRenderContext& context);
 bool EnsureFallbackTextures(const NativeGuestOutputRenderContext& context);
@@ -1078,6 +1157,13 @@ bool EnsureHdrPipeline(const NativeGuestOutputRenderContext& context);
 bool ApplySsaoPass(const NativeGuestOutputRenderContext& context,
                    nrhi::Cmd* cmd, const FrameScene& scene,
                    const nrhi::Viewport& viewport, const nrhi::Rect& scissor);
+// Produces ONLY the occlusion-cull depth grid (linearize + tile-MAX reduce),
+// for when SSAO is off - as it always is on iOS. See the comment on the
+// definition for why the grid used to be trapped inside ApplySsaoPass.
+bool ApplyOcclusionGridPass(const NativeGuestOutputRenderContext& context,
+                            nrhi::Cmd* cmd, const FrameScene& scene,
+                            const nrhi::Viewport& viewport,
+                            const nrhi::Rect& scissor);
 bool ApplySsrPass(const NativeGuestOutputRenderContext& context,
                   nrhi::Cmd* cmd, const FrameScene& scene,
                   const nrhi::Viewport& viewport, const nrhi::Rect& scissor,

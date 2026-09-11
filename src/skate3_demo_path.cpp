@@ -1,6 +1,7 @@
 #include "skate3_demo_path.h"
 
 #include "generated/skate3_init.h"
+#include "skate3_native_scene.h"
 
 #include <atomic>
 #include <chrono>
@@ -45,9 +46,29 @@ REXCVAR_DEFINE_INT32(skate3_demo_path_input_settle_ms, 2500, "Skate 3",
 REXCVAR_DEFINE_INT32(skate3_demo_path_input_delay_ms, 600, "Skate 3",
                      "Demo path: delay between injected gameplay inputs")
     .range(50, 10000);
+REXCVAR_DEFINE_BOOL(skate3_intro_movie_skip_early, false, "Skate 3",
+                    "Do not wait for the intro movie to reach its playing state before "
+                    "completing it. The override only applied once the movie was already "
+                    "running, which cost ~4.5 s of an otherwise silent boot. Only takes "
+                    "effect while boot automation is on. MEASURED A NET LOSS and therefore OFF: it moved the completion 1.7 s earlier but pushed press-start 3 s later, for 30.4 s to playable against 27.3 s with it off. The frontend simply waits somewhere else, so the movie is not on the critical path the way it looks.");
 REXCVAR_DEFINE_BOOL(skate3_intro_movie_skip, true, "Skate 3",
                     "Skip the frontend intro movie when A or Start is pressed "
                     "(the default keyboard bindings make that Space and Enter)");
+REXCVAR_DEFINE_BOOL(skate3_demo_path_confirm_pause, true, "Skate 3",
+                    "Retry the boot macro's opening 'start' press until the frontend's "
+                    "push-state stack actually shows the pause root, instead of trusting a "
+                    "fixed settle after the gameplay presence context. How long the game "
+                    "takes to accept input varies by MAP - one swallowed press used to run "
+                    "the remaining thirteen inputs against a screen that never opened, for "
+                    "a black run with nothing in the log to explain it.");
+REXCVAR_DEFINE_BOOL(skate3_boot_skip_fe_hold, false, "Skate 3",
+                    "Complete the frontend's 4-second boot hold on its first tick instead of "
+                    "waiting it out. Between language select and the EA logo the frontend runs "
+                    "a timer that accumulates the frame delta and only advances at 4000 ms; the "
+                    "guest main thread is asleep for the whole of it, so it is 4.2 s of boot "
+                    "spent on nothing. Only takes effect while boot automation is on, and only "
+                    "before the press-start state is reached, so nothing after boot can see it.");
+
 REXCVAR_DEFINE_INT32(
     skate3_boot_movie_watchdog_ms,
 #if defined(__ANDROID__)
@@ -181,6 +202,34 @@ extern "C" REX_FUNC(Skate3DemoPath_SetFrontEndStateHook) {
   sub_82D0AFA0(ctx, base);
 }
 
+// The frontend's boot hold, `sub_82608E38(this, delta_ms)`:
+//
+//     [this+0x3C] += delta_ms
+//     if ([this+0x3C] >= 4000) [this+0x40] = 1
+//
+// Nothing calls it directly - it is only reached through a vtable, which is
+// exactly the shape a dispatcher hook can intercept. Handing it 4000 ms on the
+// first tick trips the flag immediately and leaves every bit of the decision in
+// the guest's own code.
+//
+// Boot-only by construction: stage 2 is set the moment the press-start state
+// arrives, which is after this hold, so a later screen reusing the same timer
+// is never touched.
+extern "C" REX_FUNC(Skate3DemoPath_BootHoldTimerHook) {
+  if (AutomationEnabled() && REXCVAR_GET(skate3_boot_skip_fe_hold) &&
+      g_automation_stage.load(std::memory_order_relaxed) < 2) {
+    static std::atomic<bool> s_logged{false};
+    if (!s_logged.exchange(true, std::memory_order_relaxed)) {
+      REXLOG_INFO("Skate 3 demo path: completing the frontend boot hold immediately "
+                  "(timer 0x{:08X}, was {} ms of 4000)",
+                  ctx.r3.u32, REX_LOAD_U32(ctx.r3.u32 + 0x3C));
+    }
+    ctx.r4.u32 = 4000;
+  }
+
+  sub_82608E38(ctx, base);
+}
+
 extern "C" REX_FUNC(Skate3DemoPath_LanguageSelectStateHook) {
   PollF10Marker();
   LogBootFlowEventChange(g_last_language_select_event, "BootFlow LanguageSelectState",
@@ -295,6 +344,9 @@ bool UserRequestedMovieSkip() {
 std::atomic<bool> g_input_worker_quit{false};
 std::thread g_input_worker;
 
+// Frontend push-state screen id for the pause root.
+constexpr uint32_t kPauseRootScreen = 56;
+
 void JoinGameplayInputWorker() {
   g_input_worker_quit.store(true, std::memory_order_relaxed);
   if (g_input_worker.joinable()) {
@@ -315,16 +367,64 @@ bool InterruptibleSleepMs(int64_t total_ms) {
   return !g_input_worker_quit.load(std::memory_order_relaxed);
 }
 
-void StartGameplayInputWorkerIfNeeded() {
-  if (!AutomationEnabled()) {
-    return;
+// Press `start` until the pause menu is actually up.
+//
+// The gameplay presence context flips before the game will take a pad press,
+// and how long before varies by MAP: with a 400 ms settle most maps opened the
+// menu within a frame (`fe-debug` showed screen 56 pushed 16 ms after the
+// press) while Matrix swallowed it entirely and the remaining thirteen inputs
+// then ran against a screen that never opened - a black run, no crash, nothing
+// in the log to say why. A fixed settle cannot be right for every map; this
+// waits for the evidence instead.
+//
+// Safety: only retries while the frontend stack is actually readable. If it
+// never reads (sentinel), this degrades to exactly the old single press rather
+// than hammering `start` and toggling the menu back shut.
+bool PressStartUntilPaused(int32_t attempts, int32_t wait_ms) {
+  for (int32_t attempt = 1; attempt <= attempts; ++attempt) {
+    rex::kernel::xam::QueueSyntheticInput(rex::input::X_INPUT_GAMEPAD_START, 8);
+    bool observed = false;
+    for (int32_t waited = 0; waited < wait_ms; waited += 20) {
+      if (!InterruptibleSleepMs(20)) {
+        return false;
+      }
+      const uint32_t top = native_scene::FrontEndTopScreen();
+      if (top == kPauseRootScreen) {
+        if (attempt > 1) {
+          REXLOG_INFO("Skate 3 demo path: pause menu opened on start press {}", attempt);
+        }
+        return true;
+      }
+      if (top != native_scene::kFrontEndStackEmpty) {
+        observed = true;
+      }
+    }
+    if (!observed) {
+      // No readable frontend, so there is no evidence to act on. One press,
+      // as before.
+      return true;
+    }
+    REXLOG_WARN("Skate 3 demo path: start press {} did not open the pause menu "
+                "(top screen {}); retrying",
+                attempt, native_scene::FrontEndTopScreen());
   }
-  const std::string sequence = REXCVAR_GET(skate3_demo_path_gameplay_inputs);
-  if (sequence.empty()) {
-    return;
-  }
+  return false;
+}
 
-  const int32_t settle_ms = REXCVAR_GET(skate3_demo_path_input_settle_ms);
+// Macro progress, published for the loading overlay. Written only by the input
+// worker, read from the UI thread; relaxed atomics are enough because these
+// drive a progress bar, not control flow.
+std::atomic<int32_t> g_inputs_done{0};
+std::atomic<int32_t> g_inputs_total{0};
+std::atomic<bool> g_sequence_complete{false};
+
+// Parse + run a pad sequence on a worker thread. `wait_for_gameplay` is what
+// the boot path needs (nothing exists yet); an in-game level switch is already
+// in gameplay and should start after the settle only.
+bool RunSequenceAsync(const std::string& sequence, int32_t settle_ms, bool wait_for_gameplay) {
+  if (sequence.empty()) {
+    return false;
+  }
   const int32_t default_delay_ms = REXCVAR_GET(skate3_demo_path_input_delay_ms);
 
   struct SequenceEntry {
@@ -351,7 +451,7 @@ void StartGameplayInputWorkerIfNeeded() {
         REXLOG_WARN("Skate 3 demo path: bad delay in gameplay input token '{}' - sequence "
                     "disabled",
                     name);
-        return;
+        return false;
       }
       name.resize(colon);
     }
@@ -359,16 +459,23 @@ void StartGameplayInputWorkerIfNeeded() {
     if (!token) {
       REXLOG_WARN("Skate 3 demo path: unknown gameplay input token '{}' - sequence disabled",
                   name);
-      return;
+      return false;
     }
     tokens.push_back({token, delay_after_ms});
   }
   if (tokens.empty()) {
-    return;
+    return false;
   }
-  g_input_worker = std::thread([tokens, settle_ms] {
+  g_inputs_total.store(static_cast<int32_t>(tokens.size()), std::memory_order_relaxed);
+  // A previous sequence may still be winding down; take it over cleanly.
+  JoinGameplayInputWorker();
+  g_inputs_done.store(0, std::memory_order_relaxed);
+  g_sequence_complete.store(false, std::memory_order_relaxed);
+  g_input_worker_quit.store(false, std::memory_order_relaxed);
+
+  g_input_worker = std::thread([tokens, settle_ms, wait_for_gameplay] {
     // Wait for the gameplay presence context (0x8001 == 1).
-    while (rex::kernel::guest_presence::GameplayContextValue() != 1) {
+    while (wait_for_gameplay && rex::kernel::guest_presence::GameplayContextValue() != 1) {
       if (!InterruptibleSleepMs(100)) {
         return;
       }
@@ -380,6 +487,25 @@ void StartGameplayInputWorkerIfNeeded() {
     }
     for (size_t i = 0; i < tokens.size(); ++i) {
       const GameplayInputToken* token = tokens[i].token;
+      // The opening `start` is the one press with no margin for error: every
+      // later press depends on the menu it opens, and the game may not be
+      // taking input yet. Confirm that one against the frontend stack; the
+      // rest are menu-to-menu, where the menu answers within a frame.
+      if (i == 0 && REXCVAR_GET(skate3_demo_path_confirm_pause) &&
+          token->buttons == rex::input::X_INPUT_GAMEPAD_START) {
+        if (!PressStartUntilPaused(6, 400)) {
+          REXLOG_WARN("Skate 3 demo path: pause menu never opened; abandoning the "
+                      "input sequence rather than driving a screen that is not there");
+          return;
+        }
+        REXLOG_INFO("Skate 3 demo path: injected gameplay input 1/{} 'start' (confirmed)",
+                    tokens.size());
+        g_inputs_done.store(1, std::memory_order_relaxed);
+        if (!InterruptibleSleepMs(tokens[i].delay_after_ms)) {
+          return;
+        }
+        continue;
+      }
       // ~8 polls at the game's 60 Hz input tick = a ~130 ms press. Triggers
       // are analog and debounced more heavily by the game's menus - hold them
       // for a human-tap-length ~270 ms.
@@ -388,13 +514,24 @@ void StartGameplayInputWorkerIfNeeded() {
                                             token->right_trigger, is_trigger ? 16 : 8);
       REXLOG_INFO("Skate 3 demo path: injected gameplay input {}/{} '{}' (delay {} ms)", i + 1,
                   tokens.size(), token->name, tokens[i].delay_after_ms);
+      g_inputs_done.store(static_cast<int32_t>(i + 1), std::memory_order_relaxed);
       if (!InterruptibleSleepMs(tokens[i].delay_after_ms)) {
         return;
       }
     }
     REXLOG_INFO("Skate 3 demo path: gameplay input sequence complete");
+    g_sequence_complete.store(true, std::memory_order_relaxed);
   });
   std::atexit(JoinGameplayInputWorker);
+  return true;
+}
+
+void StartGameplayInputWorkerIfNeeded() {
+  if (!AutomationEnabled()) {
+    return;
+  }
+  RunSequenceAsync(REXCVAR_GET(skate3_demo_path_gameplay_inputs),
+                   REXCVAR_GET(skate3_demo_path_input_settle_ms), true);
 }
 
 }  // namespace
@@ -408,6 +545,7 @@ void InstallHooks(rex::runtime::FunctionDispatcher* dispatcher) {
   dispatcher->SetFunction(0x826FDD70, &Skate3DemoPath_LanguageSelectStateHook);
   dispatcher->SetFunction(0x826FE1D8, &Skate3DemoPath_ShowPressStartModeHook);
   dispatcher->SetFunction(0x82639400, &Skate3DemoPath_LanguageSelectUpdateHook);
+  dispatcher->SetFunction(0x82608E38, &Skate3DemoPath_BootHoldTimerHook);
   REXLOG_INFO("Skate 3 demo path: frontend probe hooks installed");
   StartGameplayInputWorkerIfNeeded();
 }
@@ -418,6 +556,23 @@ rex::input::InputSystem* GetUiInputSystem() {
 
 void SetUiInputProvider(std::function<rex::input::InputSystem*()> provider) {
   g_ui_input_provider = std::move(provider);
+}
+
+bool RunGameplayInputs(const std::string& sequence, int32_t settle_ms) {
+  return RunSequenceAsync(sequence, settle_ms, false);
+}
+
+int32_t GameplayInputsInjected() { return g_inputs_done.load(std::memory_order_relaxed); }
+
+int32_t GameplayInputsTotal() { return g_inputs_total.load(std::memory_order_relaxed); }
+
+bool GameplayInputSequenceComplete() {
+  return g_sequence_complete.load(std::memory_order_relaxed);
+}
+
+bool ShouldSkipIntroMovieEarly() {
+  return REXCVAR_GET(skate3_intro_movie_skip_early) && AutomationEnabled() &&
+         g_skip_intro_movie.load(std::memory_order_relaxed);
 }
 
 bool ShouldForceIntroMovieComplete() {

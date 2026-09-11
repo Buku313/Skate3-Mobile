@@ -6,16 +6,20 @@
 #include "native/skate3_native_lw.h"
 #include "native/skate3_native_palette.h"
 #include "skate3_mp.h"
+#include "skate3_crash_report.h"
+#include "skate3_image_watch.h"
 #include "skate3_native_scene.h"
 
 #include "generated/skate3_init.h"
 
 #include <algorithm>
 #include <atomic>
+#include <sched.h>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <functional>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -36,23 +40,10 @@ REXCVAR_DEFINE_INT32(skate3_native_render_log_interval, 0, "Skate 3",
     .range(0, 100000)
     .lifecycle(rex::cvar::Lifecycle::kHotReload);
 REXCVAR_DECLARE(bool, skate3_native_render_scene_perf_log);
+REXCVAR_DECLARE(bool, skate3_diagnostics);
 REXCVAR_DECLARE(bool, skate3_native_render_scene_occlusion_cull_guest);
 REXCVAR_DECLARE(bool, skate3_native_render_scene_handheld_potato);
 REXCVAR_DECLARE(bool, skate3_mp_enabled);
-REXCVAR_DEFINE_INT32(
-    skate3_native_render_guest_static_refresh,
-#if REX_PLATFORM_ANDROID
-    8,
-#else
-    1,
-#endif
-    "Skate 3",
-    "Run the guest Xbox renderer's static-world sorted-list dispatch once "
-    "per N frames while native handheld rendering is active. Native capture "
-    "still sees the full list every frame and dynamic/skater entries always "
-    "dispatch; only discarded static Xbox draw packets are decimated.")
-    .range(1, 16)
-    .lifecycle(rex::cvar::Lifecycle::kHotReload);
 REXCVAR_DEFINE_INT32(
     skate3_native_render_lw_update_refresh,
 #if REX_PLATFORM_ANDROID
@@ -66,21 +57,30 @@ REXCVAR_DEFINE_INT32(
     "map remain full-rate; multiplayer disables this throttle.")
     .range(1, 8)
     .lifecycle(rex::cvar::Lifecycle::kHotReload);
-REXCVAR_DEFINE_DOUBLE(skate3_guest_fps_cap,
-#if REX_PLATFORM_ANDROID
-                      60.0,
-#else
-                      0.0,
-#endif
-                      "Skate 3",
+REXCVAR_DECLARE(int32_t, skate3_native_render_guest_static_refresh);
+REXCVAR_DECLARE(int32_t, skate3_native_render_lw_refresh);
+REXCVAR_DECLARE(int32_t, skate3_guest_spin_yield);
+REXCVAR_DECLARE(bool, skate3_guest_spin_measure);
+REXCVAR_DEFINE_BOOL(skate3_d3d_ring_check, false, "Skate 3",
+                    "Diagnostic: watch the guest D3D command-ring write pointer at every "
+                    "deferred render-state flush (D3D::SetPending_RenderStates). The pointer at "
+                    "device+0x30 is read-modify-written by guest code with no null check, no "
+                    "range check and no synchronization. NOTE device+0x34 is a MOVING WATERMARK, "
+                    "not the end of the buffer - the guest legitimately writes past it, so do "
+                    "not treat that as corruption (an earlier version of this check did, and "
+                    "fired constantly on healthy sessions). Logs an implausible pointer, and "
+                    "whether a second thread ever touches the ring. Two loads per flush.")
+    .lifecycle(rex::cvar::Lifecycle::kHotReload);
+REXCVAR_DEFINE_DOUBLE(skate3_guest_fps_cap, 0.0, "Skate 3",
                       "Pace the guest render loop to this frame rate (0 = uncapped). The "
                       "guest produces frames at irregular 2-9 ms intervals; the display "
                       "(especially with G-Sync/VRR, which follows present times directly) "
                       "turns that variance into visible irregular judder that no content "
                       "smoothing can fix. An even cap a few fps below the display refresh "
                       "(e.g. 140 on a 144 Hz panel) is the standard VRR recipe: every "
-                      "frame arrives on a steady beat. Precise pacing: coarse sleep to "
-                      "~1.5 ms before the target, then spin.")
+                      "frame arrives on a steady beat. Pacing is an absolute-deadline "
+                      "sleep to the target, with skate3_guest_fps_cap_spin_us of spin "
+                      "on the tail.")
     .range(0.0, 1000.0)
     .lifecycle(rex::cvar::Lifecycle::kHotReload);
 REXCVAR_DEFINE_BOOL(skate3_guest_fps_cap_auto,
@@ -103,6 +103,27 @@ REXCVAR_DEFINE_BOOL(skate3_guest_fps_cap_auto,
                     "landing inside the panel's minimum refresh period tears even "
                     "under VRR. Overrides skate3_guest_fps_cap while the display "
                     "refresh is known.")
+    .lifecycle(rex::cvar::Lifecycle::kHotReload);
+REXCVAR_DEFINE_INT32(
+    skate3_guest_fps_cap_spin_us, 300, "Skate 3",
+    "How long the frame cap spins at the end of its wait, in microseconds.\n"
+    "\n"
+    "This was a hard-coded 2000 us. Measured on a Galaxy S23 FE during "
+    "gameplay, that put sched_yield at 14.4% of the guest render thread's "
+    "cycles - an eighth of every frame - while a scheduler trace of the same "
+    "session showed the emulated command processor runnable with no core for "
+    "7.8 of 50 seconds. The spin holds a performance core to do nothing while "
+    "the thread the next frame is waiting for is queued behind it.\n"
+    "\n"
+    "The long window bought nothing: Android gives a thread 50 us of timer "
+    "slack by default, so a multi-millisecond sleep already lands inside a few "
+    "hundred microseconds of its deadline and the rest was pure yielding. "
+    "0 disables the spin "
+    "entirely and sleeps the whole way, which is fine under vsync - the cap is "
+    "there to stop the guest running AHEAD of the panel, not to hit a deadline "
+    "to the microsecond. Raise it if frames start landing late on a device "
+    "whose scheduler wakes threads slowly.")
+    .range(0, 4000)
     .lifecycle(rex::cvar::Lifecycle::kHotReload);
 
 namespace skate3::native_render {
@@ -149,6 +170,83 @@ bool ShouldUpdateLivingWorld(uint32_t entity) {
   }
 #endif
   return true;
+}
+
+// ---- Guest D3D command-ring watch -----------------------------------------
+// D3D::SetPending_RenderStates (sub_82B83C48) sits on the path where one face
+// of the map-load crash landed: the guest walks the command ring from
+// device+0x30 and writes PM4 type-0 packets through it with no null check, no
+// range check and no synchronization. The crash itself turned out to be
+// emulated-draw suppression corrupting guest state across a load (see
+// skate3_native_render_scene_menu_unsuppress); this watch is kept because it is
+// the only visibility into the ring if it ever misbehaves again.
+//
+// The loads here are raw REX_LOAD_U32 rather than the guarded GuestTryLoadU32:
+// the guest performs the identical loads three instructions later, so a fault
+// here is a fault that was going to happen anyway - only now the crash reporter
+// describes it. Guarding would cost a sigsetjmp per state flush, and this runs
+// several times per Clear.
+std::atomic<uint32_t> g_ring_dev{0};
+std::atomic<uint32_t> g_ring_prev_write{0};
+std::atomic<uint32_t> g_ring_prev_end{0};
+std::atomic<uint64_t> g_ring_prev_tid{0};
+std::atomic<bool> g_ring_first_logged{false};
+std::atomic<bool> g_ring_multi_thread_logged{false};
+std::atomic<int64_t> g_ring_last_bad_ns{0};
+
+void CheckD3DRing(uint8_t* base, uint32_t dev, uint64_t mask, uint32_t bank, uint32_t shadow) {
+  if (!REXCVAR_GET(skate3_d3d_ring_check)) {
+    return;
+  }
+  const uint64_t tid =
+      uint64_t(std::hash<std::thread::id>{}(std::this_thread::get_id()));
+  if (dev < 0x10000) {
+    REXLOG_ERROR("d3d-ring: DEVICE pointer implausible dev={:08X} mask={:016X} bank={} tid={:X}",
+                 dev, mask, bank, tid);
+    return;
+  }
+  const uint32_t write = REX_LOAD_U32(dev + 48);
+  const uint32_t end = REX_LOAD_U32(dev + 52);
+  const uint32_t prev_write = g_ring_prev_write.exchange(write, std::memory_order_relaxed);
+  const uint32_t prev_end = g_ring_prev_end.exchange(end, std::memory_order_relaxed);
+  const uint64_t prev_tid = g_ring_prev_tid.exchange(tid, std::memory_order_relaxed);
+  const uint32_t prev_dev = g_ring_dev.exchange(dev, std::memory_order_relaxed);
+
+  if (!g_ring_first_logged.exchange(true, std::memory_order_relaxed)) {
+    REXLOG_INFO("d3d-ring: first flush dev={:08X} write={:08X} end={:08X} bank={} tid={:X}", dev,
+                write, end, bank, tid);
+  }
+
+  // The one fact that decides "two guest threads share the ring" versus "one
+  // thread computed a bad pointer". Once is enough - it is a property of the
+  // session, not of the moment.
+  if (prev_tid != 0 && prev_tid != tid && prev_dev == dev &&
+      !g_ring_multi_thread_logged.exchange(true, std::memory_order_relaxed)) {
+    REXLOG_WARN(
+        "d3d-ring: SECOND THREAD on device {:08X} - this tid={:X} previous tid={:X} "
+        "(write={:08X} prev_write={:08X})",
+        dev, tid, prev_tid, write, prev_write);
+  }
+
+  // Only genuinely impossible values. `write > end` is NOT one of them: 0x34 is
+  // a watermark the guest crosses in normal operation.
+  const bool bad = write < 0x10000 || end < 0x10000 || (write & 3u) != 0 || (end & 3u) != 0;
+  if (!bad) {
+    return;
+  }
+  // Rate-limited: once the ring is wrong every subsequent flush is wrong too.
+  const int64_t now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                             std::chrono::steady_clock::now().time_since_epoch())
+                             .count();
+  const int64_t last = g_ring_last_bad_ns.load(std::memory_order_relaxed);
+  if (last != 0 && now_ns - last < 1'000'000'000) {
+    return;
+  }
+  g_ring_last_bad_ns.store(now_ns, std::memory_order_relaxed);
+  REXLOG_ERROR(
+      "d3d-ring: CORRUPT dev={:08X} write={:08X} end={:08X} | prev dev={:08X} write={:08X} "
+      "end={:08X} tid={:X} | mask={:016X} bank={} shadow={:08X} tid={:X}",
+      dev, write, end, prev_dev, prev_write, prev_end, prev_tid, mask, bank, shadow, tid);
 }
 
 
@@ -267,10 +365,40 @@ OcclDispatchFilter g_occl_filter;
 uint32_t FilterSceneDrawList(uint8_t* base, uint32_t sort_vec, uint32_t first,
                              uint32_t count) {
   OcclDispatchFilter& f = g_occl_filter;
-  const bool occlusion_filter =
-      REXCVAR_GET(skate3_native_render_scene_occlusion_cull_guest);
-  if (f.active || count == 0 || count > 100000 ||
-      (!occlusion_filter && !g_dispatch_decimate_statics)) {
+  if (f.active || count == 0 || count > 100000) {
+    return count;
+  }
+
+  // Whole-list throttle. The reasoning is the same as the per-item cull above,
+  // taken to its conclusion: if nothing consumes the packets this dispatch
+  // builds, a machine that cannot afford to build them can build them less
+  // often. Dropping every entry is exactly the path the cull already takes
+  // when it happens to prove them all hidden, so there is no new mechanism
+  // here - only a different reason to reach it.
+  //
+  // Capture ran before this, every frame, so the native renderer still draws
+  // the complete world; what is skipped is guest work whose output is thrown
+  // away. Frame 0 of each period always dispatches, so anything that depends
+  // on the guest walking its own list still happens regularly.
+  if (const int32_t period = REXCVAR_GET(skate3_native_render_guest_static_refresh);
+      period > 1 && (g_frame_index % uint64_t(period)) != 0) {
+    skate3::native_scene::GuestReadRecoveryScope guest_read_recovery(base);
+    const uint32_t entries = REX_LOAD_U32(sort_vec);
+    if (entries != 0) {
+      const uint32_t seg = entries + first * 8;
+      // Saved and restored like the cull's own path: the guest's list must be
+      // exactly as it left it, even though nothing here rewrites it.
+      f.saved.assign(base + seg, base + seg + size_t(count) * 8);
+      f.active = true;
+      f.saved_addr = seg;
+      f.saved_bytes = count * 8;
+      skate3::native_scene::AddGuestOcclSkipped(count);
+      return 0;
+    }
+  }
+
+  const bool occlusion_filter = REXCVAR_GET(skate3_native_render_scene_occlusion_cull_guest);
+  if (!occlusion_filter && !g_dispatch_decimate_statics) {
     return count;
   }
   if (occlusion_filter && f.stamp != g_frame_index) {
@@ -357,6 +485,26 @@ void PaceGuestFrame() {
       cap = auto_cap;
     }
   }
+  // What the pacer is actually doing, logged whenever it changes - so a
+  // report carries its own pacing configuration, and so flipping Framerate
+  // Cap in the settings menu leaves both configurations in the same log with
+  // the [pace] lines around them. Reading this against the display rate is
+  // what distinguishes "the emulation is slow" from "the cap does not match
+  // what the display will present" - see display_presentable_refresh_cap_hz.
+  {
+    static double s_logged_cap = -1.0;
+    if (cap != s_logged_cap) {
+      s_logged_cap = cap;
+      const float refresh_hz = rex::ui::Window::CachedDisplayRefreshHz();
+      if (cap >= 1.0) {
+        REXLOG_INFO("[pace] guest frame cap is now {:.0f} fps (auto={}, display presents at {:.0f} Hz)",
+                    cap, REXCVAR_GET(skate3_guest_fps_cap_auto) ? "on" : "off", refresh_hz);
+      } else {
+        REXLOG_INFO("[pace] guest frame cap is now OFF (auto={}, display presents at {:.0f} Hz)",
+                    REXCVAR_GET(skate3_guest_fps_cap_auto) ? "on" : "off", refresh_hz);
+      }
+    }
+  }
   static std::chrono::steady_clock::time_point s_next{};
   if (cap < 1.0) {
     s_next = {};
@@ -370,23 +518,98 @@ void PaceGuestFrame() {
     s_next = now + interval;
     return;
   }
-  // Coarse sleep to ~1.5 ms before the target, then spin for precision.
-  while (true) {
-    const auto remaining = s_next - std::chrono::steady_clock::now();
-    if (remaining <= std::chrono::steady_clock::duration::zero()) {
-      break;
-    }
-    if (remaining > std::chrono::milliseconds(2)) {
-      std::this_thread::sleep_for(remaining - std::chrono::milliseconds(2));
-    } else if (remaining > std::chrono::microseconds(50)) {
+  // Sleep to the deadline; spin only the last few hundred microseconds.
+  //
+  // The spin window was 2 ms against a 16.6 ms period - an eighth of every
+  // frame spent in a yield loop on the guest render thread. A simpleperf
+  // profile of that thread during gameplay put `sched_yield` at 14.4% of its
+  // cycles, all of it from here, while a Perfetto trace of the same session
+  // showed the emulated command processor RUNNABLE WITH NO CORE for 7.8 of 50
+  // seconds. The two facts are the same fact: this loop holds a big core to do
+  // nothing while the thread the next frame waits on is queued behind it.
+  //
+  // Both the old code and this one sleep once and then spin the tail, so the
+  // only question is how long the tail has to be. Android sets a 50 us timer
+  // slack per thread by default and a sleep of a few milliseconds lands well
+  // inside a few hundred microseconds of its deadline, so 2000 us of runway
+  // was never buying accuracy - it was 2000 us of yielding. And the accuracy
+  // barely matters here: under vsync the presenter blocks on the panel anyway,
+  // and this cap exists to stop the guest running AHEAD of the display, not to
+  // hit a deadline to the microsecond. Raise the cvar on a device whose
+  // scheduler wakes threads late.
+  const auto spin_window =
+      std::chrono::microseconds(REXCVAR_GET(skate3_guest_fps_cap_spin_us));
+  const auto wake_at = s_next - spin_window;
+  if (std::chrono::steady_clock::now() < wake_at) {
+    std::this_thread::sleep_until(wake_at);
+  }
+  if (spin_window.count() > 0) {
+    while (std::chrono::steady_clock::now() < s_next) {
       std::this_thread::yield();
     }
   }
   s_next += interval;
 }
 
+// Delivered-frame pacing summary. The guest render thread is the only caller,
+// so the window state needs no synchronization. This measures what the player
+// actually sees - the interval between swaps - rather than the cost of any one
+// subsystem, which is what makes it the number to compare across builds.
+void ReportPacing() {
+  using Clock = std::chrono::steady_clock;
+  static Clock::time_point s_prev{};
+  static Clock::time_point s_window_start{};
+  static std::vector<double> s_intervals_ms;
+
+  // This used to run unconditionally, which was defensible while the line it
+  // produces was always printed. It is not defensible now that the shipped log
+  // level is warn and [pace] writes at info: without this gate every player
+  // would time every frame, grow a 1800-entry vector, and sort a copy of it
+  // every thirty seconds, to format a string that is then dropped.
+  if (!REXCVAR_GET(skate3_diagnostics)) {
+    if (s_prev.time_since_epoch().count() != 0) {
+      // Drop the window rather than keep it: the next sample after the switch
+      // is flipped back on would otherwise be an interval spanning however long
+      // diagnostics were off, and land in p95 as a hitch that never happened.
+      s_prev = {};
+      s_intervals_ms.clear();
+      s_intervals_ms.shrink_to_fit();
+    }
+    return;
+  }
+
+  const auto now = Clock::now();
+  if (s_prev.time_since_epoch().count() == 0) {
+    s_prev = now;
+    s_window_start = now;
+    s_intervals_ms.reserve(4096);
+    return;
+  }
+  s_intervals_ms.push_back(std::chrono::duration<double, std::milli>(now - s_prev).count());
+  s_prev = now;
+
+  const auto elapsed = now - s_window_start;
+  if (elapsed < std::chrono::seconds(30) || s_intervals_ms.empty()) {
+    return;
+  }
+  std::vector<double> sorted = s_intervals_ms;
+  std::sort(sorted.begin(), sorted.end());
+  const auto pct = [&sorted](double p) {
+    const size_t i = std::min(sorted.size() - 1,
+                              size_t(p * double(sorted.size() - 1) + 0.5));
+    return sorted[i];
+  };
+  const double secs = std::chrono::duration<double>(elapsed).count();
+  REXLOG_INFO("[pace] {:.0f}s: frames={} fps={:.1f} p50={:.1f}ms p95={:.1f}ms max={:.1f}ms",
+              secs, sorted.size(), double(sorted.size()) / secs, pct(0.50), pct(0.95),
+              sorted.back());
+  s_intervals_ms.clear();
+  s_window_start = now;
+}
+
 void OnFrameEnd(uint8_t* base) {
   PaceGuestFrame();
+  ReportPacing();
   // EMULATED-mode guest frame breakdown (emulated gameplay once regressed
   // from 140 to 66 fps while native stayed at cap; the native-scene perf
   // line only prints while the native renderer is active, so emulated
@@ -548,6 +771,20 @@ extern "C" REX_FUNC(sub_827FAF50) {
 
 // Guest D3D Swap: frame boundary.
 extern "C" REX_FUNC(sub_82B82E08) {
+  // Install point for the guest fault reporter: this runs on the guest render
+  // thread every frame whatever else is switched off, and by the first Swap the
+  // runtime's own fault handlers (MMIO write watches, the guarded-read
+  // recovery armed by the capture hooks earlier in the same frame) have all
+  // registered - so the reporter lands LAST on the chain and they keep first
+  // refusal. Idempotent; not gated on Enabled() so a --no-skate3_native_render
+  // session still reports its crashes.
+  skate3::crash_report::EnsureInstalled(base);
+  // Liveness for the hang watchdog: this is the guest's own frame boundary, so
+  // it stops exactly when the game stops producing frames.
+  skate3::crash_report::Heartbeat();
+  // Drain the static-image write watch's trap records (logged here, off the
+  // fault handler) and re-arm its hot pages for the next frame.
+  skate3::image_watch::FlushPending();
   if (skate3::native_render::Enabled()) {
     skate3::native_render::OnFrameEnd(base);
   }
@@ -1094,6 +1331,8 @@ extern "C" REX_FUNC(sub_82B83C48) {
   if (skate3::native_render::Enabled()) {
     skate3::native_scene::OnRenderStateUpload(ctx.r4.u64, ctx.r5.u32, ctx.r6.u32);
   }
+  // Last look at the ring before the guest walks it; see CheckD3DRing.
+  skate3::native_render::CheckD3DRing(base, ctx.r3.u32, ctx.r4.u64, ctx.r5.u32, ctx.r6.u32);
   __imp__sub_82B83C48(ctx, base);
 }
 
@@ -1125,6 +1364,122 @@ extern "C" REX_FUNC(sub_82B79FC0) {
   if (enabled) {
     skate3::native_scene::OnDrawDone(base, 2, r4, r5, r6, ctx.r3.u32 != 0 ? ctx.r3.u32 : r7);
   }
+}
+
+// The loop AROUND the spin-wait. Timing it answers the question the profiler
+// could not: the sampler says the render thread is inside this 48% of the
+// time, but a share of samples is not a duration - it cannot say whether the
+// thread is waiting 50 ms of a 122 ms frame or spending the same share of a
+// frame it would have taken anyway. This measures the wall time and how often
+// the wait is entered, which is what decides whether it is worth attacking.
+extern "C" REX_FUNC(sub_82B755C0) {
+  if (!REXCVAR_GET(skate3_guest_spin_measure)) {
+    __imp__sub_82B755C0(ctx, base);
+    return;
+  }
+  static std::atomic<uint64_t> ns{0};
+  static std::atomic<uint64_t> calls{0};
+  static std::atomic<uint64_t> last_report_ns{0};
+  const auto t0 = std::chrono::steady_clock::now();
+  __imp__sub_82B755C0(ctx, base);
+  const auto t1 = std::chrono::steady_clock::now();
+  const uint64_t took =
+      uint64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count());
+  const uint64_t total = ns.fetch_add(took, std::memory_order_relaxed) + took;
+  const uint64_t n = calls.fetch_add(1, std::memory_order_relaxed) + 1;
+  const uint64_t now_ns =
+      uint64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(t1.time_since_epoch()).count());
+  uint64_t last = last_report_ns.load(std::memory_order_relaxed);
+  if (now_ns - last > 5000000000ull &&
+      last_report_ns.compare_exchange_strong(last, now_ns, std::memory_order_relaxed)) {
+    REXLOG_WARN("guest-wait: {} calls, {:.1f} ms total, {:.3f} ms each, {:.1f} ms/s",
+                n, double(total) / 1e6, double(total) / double(n) / 1e6,
+                double(total) / 1e6 / 5.0);
+    ns.store(0, std::memory_order_relaxed);
+    calls.store(0, std::memory_order_relaxed);
+  }
+}
+
+// The guest's spin-wait body, and by a wide margin the most expensive guest
+// function on a slow device: a sampling profile of the render thread put
+// sub_82B76080 at 35% and its calling loop sub_82B755C0 at 13%, stable across
+// four windows of ~15,000 samples. Together, roughly half the render thread.
+//
+// It is a poll - read a timestamp, subtract, compare against 5000, return
+// "keep waiting" - and on the console it is paced. The Xbox 360 wrote the wait
+// as `cctpl` (drop this SMT thread's priority so its sibling gets the core),
+// thirty-two `db16cyc` (sixteen cycles of delay each), then `cctpm`. The
+// recompiler emits none of those three: they have no x86/ARM equivalent and
+// they carry no architectural state, so the loop that was throttled on the
+// console runs flat out here, burning a core and the memory bandwidth that the
+// threads it is waiting FOR need in order to finish.
+//
+// Giving the wait back its pacing is the point. Default 0 keeps today's
+// behaviour so this cannot regress a device that is already fast.
+extern "C" REX_FUNC(sub_82B76080) {
+  if (const int32_t mode = REXCVAR_GET(skate3_guest_spin_yield); mode > 0) {
+    if (mode == 1) {
+      // The console's own pacing, approximately: a pipeline hint rather than a
+      // trip through the scheduler. Cheapest, and it cannot lose the thread's
+      // timeslice while it holds anything.
+      for (int i = 0; i < 32; ++i) {
+        __builtin_arm_yield();
+      }
+    } else if (mode == 2) {
+      // Offer the core to anything else runnable on it. Note this does NOT
+      // idle the core: with nothing else queued, sched_yield returns straight
+      // away and the spin continues at full speed. Measured as a wash, which
+      // is exactly what that implies.
+      sched_yield();
+    } else {
+      // Actually stop burning the core. The thread this loop waits on is
+      // saturated on another core, and a sibling spinning flat out costs it
+      // memory bandwidth, shared cache and - on a tablet already sitting at
+      // 48 C - power budget it could otherwise spend on clocks. The wait is
+      // ~43 ms, so sleeping at 100 us granularity cannot meaningfully delay
+      // noticing that it ended.
+      struct timespec ts = {0, 100000};
+      nanosleep(&ts, nullptr);
+    }
+  }
+  __imp__sub_82B76080(ctx, base);
+}
+
+// Sk8::cLivingWorldPresEntityManager::Update - the ambient world's whole sim
+// tick: pedestrians and traffic, every entity, every frame.
+//
+// Skipping it on non-refresh frames is the single largest lever on a device
+// that cannot keep up, because it is measurably what separates a menu from
+// gameplay. The Galaxy Tab A7 Lite holds 55-57 fps in the menus and collapses
+// to 6-7 in the world, on the same renderer and the same GPU - and the GPU is
+// idle in both (wait 0.00 ms of a 155 ms frame), so the entire difference is
+// the guest CPU simulating the crowd.
+//
+// The skater, the board and the physics do not come through here, so they keep
+// running at full rate; what stutters is the pedestrians' own animation. Both
+// the vtable thunk at 0x827BC9A0 and any direct dispatch land on this
+// function, so hooking it here catches the subsystem in one place.
+extern "C" REX_FUNC(sub_827BC9A8) {
+  // Instrumented: three controlled runs (throttle off, every 2nd, every 4th)
+  // all measured p50 116.5 ms, so either this never fires or the crowd is not
+  // the cost here. Counting says which.
+  static std::atomic<uint64_t> calls{0};
+  static std::atomic<uint64_t> skips{0};
+  const uint64_t n = calls.fetch_add(1, std::memory_order_relaxed) + 1;
+  bool skipped = false;
+  if (const int32_t period = REXCVAR_GET(skate3_native_render_lw_refresh);
+      period > 1 && skate3::native_render::Enabled() &&
+      (skate3::native_render::g_frame_index % uint64_t(period)) != 0) {
+    skips.fetch_add(1, std::memory_order_relaxed);
+    skipped = true;
+  }
+  if ((n % 2000) == 0) {
+    REXLOG_WARN("lw-throttle: {} calls, {} skipped", n, skips.load());
+  }
+  if (skipped) {
+    return;
+  }
+  __imp__sub_827BC9A8(ctx, base);
 }
 
 // LivingWorld batch pack writer (unnamed; called per entity per sim tick

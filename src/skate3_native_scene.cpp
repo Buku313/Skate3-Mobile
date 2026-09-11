@@ -64,7 +64,7 @@ REXCVAR_DECLARE(std::string, skate3_native_render_snapshot_dir);
 constexpr int32_t kDefaultSceneMsaa = 1;
 constexpr bool kDefaultSsao = false;
 constexpr bool kDefaultBloom = false;
-constexpr bool kDefaultHdr = false;
+constexpr bool kDefaultHdr = true;
 constexpr bool kDefaultShafts = false;
 constexpr int32_t kDefaultStaticShadowSize = 1024;
 constexpr bool kDefaultShadowPcss = false;
@@ -80,6 +80,36 @@ constexpr bool kDefaultShadowPcss = true;
 constexpr bool kDefaultNativeScene = true;
 #endif
 
+REXCVAR_DEFINE_INT32(skate3_stall_watchdog_seconds, 12, "Skate 3",
+                     "Seconds of the guest submitting no draws - while frames keep being "
+                     "presented - before every thread's stack is dumped. This is the shape a "
+                     "guest deadlock takes: the renderer happily presents an unchanging scene, "
+                     "so the frame-stall watchdog below never notices. 0 borrows three times "
+                     "that one's limit.")
+    .lifecycle(rex::cvar::Lifecycle::kHotReload);
+
+REXCVAR_DEFINE_INT32(skate3_hang_watchdog_seconds, 15, "Skate 3",
+                     "Seconds without a guest frame before the hang watchdog dumps every "
+                     "thread's stack to the log and to <log_file>.crash (0 = off). A freeze "
+                     "raises no signal, so the crash reporter never sees one and the log "
+                     "simply stops - this is the only way to find out which thread is stuck "
+                     "and what everyone else is waiting on. Costs one sleeping thread.")
+    .range(0, 600)
+    .lifecycle(rex::cvar::Lifecycle::kHotReload);
+REXCVAR_DEFINE_INT32(skate3_fe_debug_screen_offset, 0x264, "Skate 3",
+                     "Offset in the frontend manager holding the CURRENT SCREEN pointer; "
+                     "skate3_fe_debug follows it and reports words that step by exactly "
+                     "one, which is what a menu cursor does and a timer does not. The "
+                     "manager's own window has no cursor in it - only fade ramps.")
+    .range(0, 2044)
+    .lifecycle(rex::cvar::Lifecycle::kHotReload);
+REXCVAR_DEFINE_BOOL(skate3_fe_debug, false, "Skate 3",
+                    "Log the frontend menu state: the screen push-state stack, the raw words "
+                    "of the live screen record, and the head of the object it points at. The "
+                    "selection/cursor field identifies itself - move the cursor N rows and "
+                    "exactly one word steps N times. Lets a harness drive the menus exactly "
+                    "instead of pressing 'down' forty times and hoping.")
+    .lifecycle(rex::cvar::Lifecycle::kHotReload);
 REXCVAR_DEFINE_BOOL(skate3_native_render_scene, true, "Skate 3",
                     "Render the game scene natively from the hooked MeshContext stream, "
                     "replacing the emulated GPU output (requires skate3_native_render). "
@@ -514,6 +544,22 @@ REXCVAR_DEFINE_BOOL(
     "safety hatch if the display screen misrenders natively.")
     .lifecycle(rex::cvar::Lifecycle::kHotReload);
 REXCVAR_DEFINE_BOOL(
+    skate3_native_render_scene_photo_prewarm, true, "Skate 3",
+    "Build the photo-editor postfx pipelines behind the loading screen, one "
+    "per frame, instead of all nine on the first frame the editor is open. "
+    "They are the only PSO family in the renderer that is not already "
+    "prewarmed, and the only one whose pixel shaders are shared with nothing "
+    "else - so on MoltenVK, where a build is a SPIR-V -> MSL -> Metal "
+    "compile, opening the editor on a cold cache stalled the thread the guest "
+    "renders on for seconds. It reached players as 'picture missions crash "
+    "the first time and work after relaunching', the relaunch being the disk "
+    "pipeline cache serving what the crashed run had already compiled. Costs "
+    "a few seconds spread across the first cold load and nothing on later "
+    "launches. Turn OFF to measure the cold path - the editor still works, it "
+    "just builds the chain a frame at a time while rendering without the "
+    "effects.")
+    .lifecycle(rex::cvar::Lifecycle::kHotReload);
+REXCVAR_DEFINE_BOOL(
     skate3_native_render_scene_photo_native, true, "Skate 3",
     "Render the photo-mission photo editor NATIVELY, applying the game's "
     "own postfx chain (depth of field / saturation / brightness / contrast "
@@ -687,16 +733,18 @@ REXCVAR_DEFINE_BOOL(
     .lifecycle(rex::cvar::Lifecycle::kHotReload);
 REXCVAR_DEFINE_BOOL(
     skate3_native_render_scene_menu_unsuppress, false, "Skate 3",
-    "ESCAPE HATCH, normally unnecessary: while a menu/pause/loading context "
-    "(presence context 0) renders natively, temporarily clear "
-    "native_render_suppress_emulated_draws so ALL emulated passes execute. "
-    "The original motivation, the team-menu skater portrait boxes are "
-    "one-shot render-to-texture passes that suppression left forever empty "
-    ", is covered without this by the SDK's pitch-selective suppression "
-    "(native_render_suppress_mode 2: surfaces <= 512 px wide, incl. the "
-    "portrait cards, always execute). Turn on only if small offscreen "
-    "composites are missing in menus despite that; costs the full emulated "
-    "pipeline's GPU time during menus.")
+    "ESCAPE HATCH: while a menu/pause/loading context (presence context 0) "
+    "renders natively, temporarily clear native_render_suppress_emulated_draws "
+    "so ALL emulated passes execute; restored on the first gameplay frame. "
+    "Its original motivation (team-menu skater portrait boxes left empty by "
+    "suppression) is covered without it by the SDK's pitch-selective "
+    "suppression. Costs the full emulated pipeline's GPU time during menus and "
+    "loads, and roughly doubles the worst event-loop stall (measured 1.0 s -> "
+    "2.4 s), which the desktop reports as the window not responding. "
+    "NOT a fix for the intermittent map-load crash: it was briefly defaulted on "
+    "for that, on an under-powered harness that only reached ~2 map loads per "
+    "run; at 3+ loads per run the crash reproduces with un-suppression verified "
+    "active in the log. See the crash notes before trying this again.")
     .lifecycle(rex::cvar::Lifecycle::kHotReload);
 REXCVAR_DEFINE_BOOL(skate3_native_render_snapshot_all_draws, false, "Skate 3",
                     "Record the draw stream on every recorded frame instead of 2 of every "
@@ -1057,14 +1105,17 @@ REXCVAR_DEFINE_INT32(skate3_native_render_scene_tex_store_mb, 1280, "Skate 3",
                      "the idle guards keep a superseded map's working set "
                      "resident for minutes after a switch; over this budget "
                      "the LRU drains oldest-first with a shortened idle "
-                     "guard so VRAM does not accumulate across map changes.")
-    .range(256, 16384)
+                     "guard so VRAM does not accumulate across map changes. "
+                     "Below about 128 the store sits permanently in byte "
+                     "pressure and re-decodes what it just evicted, so small "
+                     "values trade page faults for decode churn.")
+    .range(64, 16384)
     .lifecycle(rex::cvar::Lifecycle::kHotReload);
 REXCVAR_DEFINE_INT32(skate3_native_render_scene_mesh_store_mb, 1024, "Skate 3",
                      "Mesh cache GPU byte budget in MB (vertex + index "
                      "buffers of cached decodes). Same byte-pressure LRU "
                      "behavior as the texture-store budget.")
-    .range(256, 16384)
+    .range(64, 16384)
     .lifecycle(rex::cvar::Lifecycle::kHotReload);
 REXCVAR_DEFINE_BOOL(skate3_native_render_scene_retain_offscreen, true, "Skate 3",
                     "Keep recently seen static items in the scene while the game "
@@ -1246,11 +1297,28 @@ REXCVAR_DEFINE_BOOL(
     "scene fidelity.")
     .lifecycle(rex::cvar::Lifecycle::kHotReload);
 
+REXCVAR_DEFINE_BOOL(skate3_native_render_scene_publish_census, false, "Skate 3",
+                    "Diagnostic: report why BuildFrameScene did or did not publish a "
+                    "scene. Both of its early exits (no submit records at all; records "
+                    "but no screen-shaped perspective view) are silent by design, so a "
+                    "renderer that never takes over gives no clue which one is firing. "
+                    "One aggregate line every 300 builds.")
+    .lifecycle(rex::cvar::Lifecycle::kHotReload);
+
 REXCVAR_DEFINE_INT32(skate3_native_render_scene_perf_interval, 600, "Skate 3",
                      "Frames between native-scene perf/stats log lines. Lower "
                      "values give finer windows for chasing transient frame-"
                      "rate dips at the cost of log volume.")
     .range(60, 6000)
+    .lifecycle(rex::cvar::Lifecycle::kHotReload);
+
+REXCVAR_DEFINE_INT32(skate3_native_render_scene_slow_frame_max_ms, 2000,
+                     "Skate 3",
+                     "Upper bound (ms) on the guest-frame dt the slow-frame "
+                     "attribution line still reports. The original 100ms cap "
+                     "silently excluded exactly the multi-hundred-ms "
+                     "streaming spikes the breakdown exists to explain.")
+    .range(10, 60000)
     .lifecycle(rex::cvar::Lifecycle::kHotReload);
 
 REXCVAR_DEFINE_BOOL(skate3_native_render_scene_occlusion_cull, true, "Skate 3",
@@ -1263,6 +1331,16 @@ REXCVAR_DEFINE_BOOL(skate3_native_render_scene_occlusion_cull, true, "Skate 3",
                     "items.")
     .lifecycle(rex::cvar::Lifecycle::kHotReload);
 
+REXCVAR_DEFINE_BOOL(skate3_native_render_scene_occlusion_grid_standalone, true,
+                    "Skate 3",
+                    "Build the occlusion cull's depth grid in a pass of its "
+                    "own when SSAO is off. The tile-MAX reduce that feeds the "
+                    "cull historically lived inside the SSAO pass, so "
+                    "disabling SSAO - which every iOS build does - silently "
+                    "disabled the cull with it. False restores that coupling: "
+                    "the grid is then produced only when SSAO runs.")
+    .lifecycle(rex::cvar::Lifecycle::kHotReload);
+
 REXCVAR_DEFINE_BOOL(skate3_native_render_scene_occlusion_cull_build, true,
                     "Skate 3",
                     "Also skip the per-frame scene-item rebuild for statics "
@@ -1272,6 +1350,52 @@ REXCVAR_DEFINE_BOOL(skate3_native_render_scene_occlusion_cull_build, true,
                     "disocclusion is re-tested and the persistent shadow "
                     "caster cache stays refreshed. Requires "
                     "skate3_native_render_scene_occlusion_cull.")
+    .lifecycle(rex::cvar::Lifecycle::kHotReload);
+
+REXCVAR_DEFINE_INT32(
+    skate3_native_render_guest_static_refresh, 1, "Skate 3",
+    "Run the guest engine's static-world draw-list dispatch only every Nth "
+    "frame. 1 is every frame, which is today's behaviour. The dispatch builds "
+    "command packets the native renderer suppresses anyway - nothing consumes "
+    "them - yet it is the guest render thread's dominant per-item cost, so on "
+    "a machine that cannot keep up this buys frames for nothing visible. "
+    "Capture is unaffected and runs every frame, so scene items, shadow "
+    "casters and state stay complete. Raise it only where the CPU is the "
+    "limit; it does nothing for a GPU-bound device.")
+    .range(1, 8)
+    .lifecycle(rex::cvar::Lifecycle::kHotReload);
+
+REXCVAR_DEFINE_BOOL(
+    skate3_guest_spin_measure, false, "Skate 3",
+    "Time the guest's wait loop (sub_82B755C0) and report how many milliseconds "
+    "per second the render thread spends in it. A profiler share is not a "
+    "duration; this is.")
+    .lifecycle(rex::cvar::Lifecycle::kHotReload);
+
+REXCVAR_DEFINE_INT32(
+    skate3_guest_spin_yield, 0, "Skate 3",
+    "Pace the guest's spin-wait (sub_82B76080), which a sampling profile put at "
+    "35% of the render thread with its calling loop at another 13%. The console "
+    "paced that wait with cctpl/db16cyc/cctpm; none of the three survive "
+    "recompilation, so it spins flat out and starves the threads it is waiting "
+    "for. 0 = today's behaviour, 1 = ARM yield hints (approximates db16cyc), "
+    "2 = sched_yield (which does NOT idle the core), 3 = sleep 100us "
+    "(which does).")
+    .range(0, 3)
+    .lifecycle(rex::cvar::Lifecycle::kHotReload);
+
+REXCVAR_DEFINE_INT32(
+    skate3_native_render_lw_refresh, 1, "Skate 3",
+    "Run the ambient world - pedestrians and traffic - only every Nth frame. "
+    "1 is every frame, which is today's behaviour. This is the work that "
+    "separates a menu from gameplay on a slow device: the same tablet holds "
+    "56 fps in the menus and 6 in the world, and the GPU is idle for both "
+    "(wait 0.00 ms of a 155 ms frame), so the difference is the guest CPU "
+    "simulating the crowd. The skater, the board and the physics run through "
+    "different functions and stay at full rate. Above 1 the LivingWorld "
+    "gap-fill window widens to match, or an NPC that misses its update reads "
+    "as a blink.")
+    .range(1, 8)
     .lifecycle(rex::cvar::Lifecycle::kHotReload);
 
 REXCVAR_DEFINE_BOOL(skate3_native_render_scene_occlusion_cull_guest, true,
@@ -1306,6 +1430,15 @@ REXCVAR_DEFINE_BOOL(skate3_native_render_scene_dyn_gap_fill, true, "Skate 3",
                     "missed publish frames (high-frame-rate body flicker)")
     .lifecycle(rex::cvar::Lifecycle::kHotReload);
 namespace skate3::native_scene {
+
+// Top of the frontend push-state stack, refreshed every frame by
+// PortraitRttWindowActive(); kFrontEndStackEmpty when the stack is empty or the
+// frontend has not been read yet. Written on the render thread, read by the
+// boot macro's input worker - relaxed is enough, it gates a retry, not memory.
+std::atomic<uint32_t> g_fe_stack_top{kFrontEndStackEmpty};
+
+uint32_t FrontEndTopScreen() { return g_fe_stack_top.load(std::memory_order_relaxed); }
+
 namespace {
 
 // Verified guest structure offsets.
@@ -2193,8 +2326,16 @@ bool BuildItemFromMesh(uint8_t* base, uint32_t mesh, DrawItem& item) {
   item.vb_bytes = BSwap32(vb_words[2]);
   item.ib_addr = BSwap32(ib_words[0]) & 0xFFFFFFFC;
   item.ib_count = BSwap32(ib_words[2]);
+  // vb_bytes need only COVER a whole number of vertices, not equal one
+  // exactly. Community custom maps (ArenaBuilder-built worlds) ship vertex
+  // buffers with a few trailing bytes past the last vertex - e.g. 43968
+  // bytes at stride 36 leaves 12 over - and requiring an exact multiple
+  // rejected the entire mesh, so the world rendered with no ground at all.
+  // Every consumer already derives the vertex count as vb_bytes / stride
+  // (integer division), so the trailing bytes are simply unused; all that
+  // is really required is room for at least one vertex.
   if (item.vb_addr == 0 || item.ib_addr == 0 || item.vb_bytes == 0 ||
-      item.ib_count == 0 || item.vb_bytes % item.stride != 0) {
+      item.ib_count == 0 || item.stride == 0 || item.vb_bytes < item.stride) {
     g_rej_geom.fetch_add(1, std::memory_order_relaxed);
     return false;
   }
@@ -2694,7 +2835,7 @@ bool BuildItemFromMeshCached(uint8_t* base, uint32_t mesh, DrawItem& item) {
             return false;
           }
 #if REX_PLATFORM_ANDROID
-          core.fp_frame = frame + 16;
+          core.fp_frame = frame + (REXCVAR_GET(skate3_native_render_scene_handheld_potato) ? 16 : 4);
 #else
           core.fp_frame = frame + 4;
 #endif
@@ -2725,7 +2866,7 @@ bool BuildItemFromMeshCached(uint8_t* base, uint32_t mesh, DrawItem& item) {
   core.item = item;
   core.fp_frame = frame +
 #if REX_PLATFORM_ANDROID
-                      16;
+                      (REXCVAR_GET(skate3_native_render_scene_handheld_potato) ? 16 : 4);
 #else
                       4;
 #endif
@@ -2735,7 +2876,9 @@ bool BuildItemFromMeshCached(uint8_t* base, uint32_t mesh, DrawItem& item) {
   // a handful of items).
   core.rebuild_frame = frame +
 #if REX_PLATFORM_ANDROID
-                           (item.diffuse_tex != 0 ? 128 : 4);
+                           (REXCVAR_GET(skate3_native_render_scene_handheld_potato)
+                                ? (item.diffuse_tex != 0 ? 128 : 4)
+                                : (item.diffuse_tex != 0 ? 32 : 2));
 #else
                            (item.diffuse_tex != 0 ? 32 : 2);
 #endif
@@ -3440,6 +3583,183 @@ bool CasEditorActive(uint8_t* base) {
 //  - the CAS editor heartbeat is fresh.
 // Render thread only (statics). Every stack change logs its ids (capped)
 // so unknown portrait screens name themselves in the session log.
+// Frontend menu readout (skate3_fe_debug). Blind pad macros - "press down 40
+// times and hope" - land on challenge entries and soft-lock, which makes any
+// map-load test unreliable and slow. Two outputs, both change-gated:
+//
+//  1. The whole frontend push-state stack, one line per change, with each
+//     screen's id and its 5 record words. That alone lets a harness navigate
+//     closed-loop ("am I on the screen I wanted yet?") instead of pressing
+//     buttons blind.
+//  2. A CHANGE DIFF over a window of the frontend manager object. The cursor
+//     lives in the manager or a screen object, not in the 20-byte stack
+//     record, so rather than guess the offset this reports which words moved
+//     and from what to what. Step the cursor N rows and the selection field
+//     names itself: it is the one that steps N times by 1.
+//
+// Off by default. The window is read with the guarded loader, so an
+// unmapped or torn frontend is a skipped line rather than a fault.
+constexpr uint32_t kFeWindowWords = 512;  // 2 KiB from the manager base
+
+void LogFrontEndDebug(uint8_t* base, uint32_t mgr, const uint32_t* ids, uint32_t n,
+                      uint32_t beg) {
+  if (!REXCVAR_GET(skate3_fe_debug)) {
+    return;
+  }
+
+  // ---- 1. the stack, with every record ----
+  {
+    static uint64_t s_last_stack = 0;
+    uint64_t sig = 1469598103934665603ull;
+    char buf[512] = "";
+    int off = 0;
+    bool ok = true;
+    for (uint32_t i = 0; i < n && ok; ++i) {
+      uint32_t rec[5] = {};
+      for (uint32_t w = 0; w < 5; ++w) {
+        if (!GuestTryLoadU32(base, beg + i * 20 + w * 4, &rec[w])) {
+          ok = false;
+          break;
+        }
+        sig = (sig ^ rec[w]) * 1099511628211ull;
+      }
+      if (!ok) break;
+      if (off < int(sizeof(buf)) - 64) {
+        off += std::snprintf(buf + off, sizeof(buf) - off, "%s%u{%08X %08X %08X %08X}",
+                             i ? " " : "", ids[i], rec[1], rec[2], rec[3], rec[4]);
+      }
+    }
+    if (ok && sig != s_last_stack) {
+      s_last_stack = sig;
+      REXLOG_INFO("fe-debug: stack mgr={:08X} n={} [{}]", mgr, n, buf);
+    }
+  }
+
+  // ---- 2. the manager-window change diff ----
+  static uint32_t s_prev[kFeWindowWords] = {};
+  static bool s_have_prev = false;
+  static uint32_t s_prev_mgr = 0;
+  uint32_t cur[kFeWindowWords] = {};
+  for (uint32_t i = 0; i < kFeWindowWords; ++i) {
+    if (!GuestTryLoadU32(base, mgr + i * 4, &cur[i])) {
+      return;  // window not fully readable this frame; try again next time
+    }
+  }
+  if (!s_have_prev || s_prev_mgr != mgr) {
+    std::memcpy(s_prev, cur, sizeof(cur));
+    s_have_prev = true;
+    s_prev_mgr = mgr;
+    return;
+  }
+  // Per-frame counters and timers (the manager has at least one at +060, which
+  // steps every frame) drown everything else. A word that has already moved
+  // many times is one of those, not a cursor: a cursor moves once per button
+  // press, so a handful of times in a whole session. Retire the busy ones.
+  static uint8_t s_change_count[kFeWindowWords] = {};
+  constexpr uint8_t kBusyWord = 8;
+  char diff[512] = "";
+  int off = 0;
+  uint32_t changed = 0;
+  for (uint32_t i = 0; i < kFeWindowWords; ++i) {
+    if (cur[i] == s_prev[i]) {
+      continue;
+    }
+    if (s_change_count[i] < kBusyWord) {
+      ++s_change_count[i];
+    }
+    if (s_change_count[i] >= kBusyWord) {
+      continue;  // a counter/timer; it has nothing to say about the selection
+    }
+    ++changed;
+    if (off < int(sizeof(diff)) - 40) {
+      off += std::snprintf(diff + off, sizeof(diff) - off, "%s+%03X:%08X->%08X", off ? " " : "",
+                           i * 4, s_prev[i], cur[i]);
+    }
+  }
+  std::memcpy(s_prev, cur, sizeof(cur));
+  // A handful of moving words is a cursor or a timer; hundreds is the screen
+  // being rebuilt and tells us nothing about the selection.
+  if (changed == 0 || changed > 24) {
+    return;
+  }
+  REXLOG_INFO("fe-debug: mgr {:08X} changed {} word(s): {}", mgr, changed, diff);
+
+  // ---- 3. the SCREEN object, one level down ----
+  //
+  // The manager's first 2 KiB holds no cursor: stepping the Locations list 13
+  // rows moved only fade ramps and alpha (floats at +1D4/+1D8, 0xFF->0xF0->...
+  // at +1DC..+1E4). What it does hold is the current screen at +264 (and +254),
+  // and the cursor lives in there. Reported differently from the window above,
+  // because a cursor announces itself by HOW it moves rather than how often: a
+  // row step is a word changing by exactly one. Nothing else in a frontend
+  // object does that repeatedly, so no busy-word retirement is needed - and
+  // retirement would have hidden a 13-row walk anyway (it retires at 8).
+  const uint32_t screen_ptr_offset =
+      uint32_t(REXCVAR_GET(skate3_fe_debug_screen_offset));
+  if (screen_ptr_offset == 0 || screen_ptr_offset / 4 >= kFeWindowWords) {
+    return;
+  }
+  const uint32_t screen = cur[screen_ptr_offset / 4];
+  if (screen < 0x10000) {
+    return;
+  }
+  constexpr uint32_t kScreenWords = 256;
+  // A baseline PER ADDRESS, not one global one: mgr+264 alternates between two
+  // adjacent objects every frame (405F3520 / 405F3534), and re-baselining on
+  // each flip threw away the very comparison this exists to make - a 13-row
+  // walk showed up as one step.
+  constexpr uint32_t kScreenSlots = 4;
+  static uint32_t s_screen_addr[kScreenSlots] = {};
+  static uint32_t s_screen_prev[kScreenSlots][kScreenWords] = {};
+  uint32_t scur[kScreenWords] = {};
+  for (uint32_t i = 0; i < kScreenWords; ++i) {
+    if (!GuestTryLoadU32(base, screen + i * 4, &scur[i])) {
+      return;
+    }
+  }
+  uint32_t slot = kScreenSlots;
+  for (uint32_t i = 0; i < kScreenSlots; ++i) {
+    if (s_screen_addr[i] == screen) {
+      slot = i;
+      break;
+    }
+  }
+  if (slot == kScreenSlots) {
+    for (uint32_t i = 0; i < kScreenSlots; ++i) {
+      if (s_screen_addr[i] == 0) {
+        slot = i;
+        break;
+      }
+    }
+    if (slot == kScreenSlots) {
+      slot = 0;  // oldest wins; four is plenty for a menu stack
+    }
+    s_screen_addr[slot] = screen;
+    std::memcpy(s_screen_prev[slot], scur, sizeof(scur));
+    REXLOG_INFO("fe-debug: screen object {:08X} (mgr+{:03X}) watched", screen,
+                screen_ptr_offset);
+    return;
+  }
+  char sdiff[256] = "";
+  int soff = 0;
+  uint32_t steps = 0;
+  for (uint32_t i = 0; i < kScreenWords; ++i) {
+    const int64_t delta = int64_t(scur[i]) - int64_t(s_screen_prev[slot][i]);
+    if (delta != 1 && delta != -1) {
+      continue;
+    }
+    ++steps;
+    if (soff < int(sizeof(sdiff)) - 32) {
+      soff += std::snprintf(sdiff + soff, sizeof(sdiff) - soff, "%s+%03X:%u->%u",
+                            soff ? " " : "", i * 4, s_screen_prev[slot][i], scur[i]);
+    }
+  }
+  std::memcpy(s_screen_prev[slot], scur, sizeof(scur));
+  if (steps != 0 && steps <= 8) {
+    REXLOG_INFO("fe-debug: screen {:08X} stepped {}: {}", screen, steps, sdiff);
+  }
+}
+
 bool PortraitRttWindowActive() {
   if (CasEditorHeartbeatFresh()) {
     return true;
@@ -3481,6 +3801,15 @@ bool PortraitRttWindowActive() {
       unknown_screen = true;
     }
   }
+  // Publish the top of the stack for the boot macro. It presses `start` a
+  // fixed delay after the gameplay presence context and has no way to know the
+  // press was taken; on some maps the game is not accepting input yet, the
+  // press is swallowed, and the whole sequence then runs against a screen that
+  // never opened. This is the cheapest honest feedback available - the value is
+  // already computed here, every frame, for the render decision below.
+  g_fe_stack_top.store(n != 0 ? ids[n - 1] : kFrontEndStackEmpty,
+                       std::memory_order_relaxed);
+  LogFrontEndDebug(base, mgr, ids, n, beg);
   static uint64_t s_last_sig = 0;
   static int64_t s_change_ns = -1;
   static bool s_prev_unknown = false;
@@ -4695,12 +5024,144 @@ void OnSetStreamSource(uint32_t stream, uint32_t vb_obj, uint32_t offset, uint32
   }
 }
 
+// One cached read of a shader object's debug path (guest object + 0x54).
+//
+// OnDrawDone classifies draws by matching needles against this path, and it did
+// so in five independent places, each of which read 119 bytes out of guest
+// memory ONE BYTE AT A TIME and then ran strstr over the result - for every
+// draw, of every frame. Two of the five cached their answer; three did not.
+//
+// Measured on a Galaxy S23 FE with the v0.1.14 build: `twoway_strstr` was 4.3%
+// of the guest render thread's cycles over a whole run and **14% inside the
+// streaming hitches**, where it was the single largest entry. The guest byte
+// loop feeding it is additional and is not counted in that figure.
+//
+// A shader object's path does not change, so read it once and let the callers
+// match against a host copy. The risk this takes is the one the per-site caches
+// already took: a freed guest object whose address is reused by a different
+// shader would answer with the old path. That is bounded here in a way it was
+// not before - the table is dropped wholesale every kShaderPathCacheFrames and
+// whenever it outgrows its cap, where the old per-site caches held their
+// answers for the life of the process.
+//
+// Returns nullptr when the object is unreadable or its path is empty, which is
+// what every caller treated as "no match" anyway.
+constexpr uint64_t kShaderPathCacheFrames = 1800;  // ~30 s at 60 fps
+constexpr size_t kShaderPathCacheCap = 8192;
+
+// Age a per-shader classification memo. Call this BEFORE looking a key up.
+//
+// Two things are wrong with how these memos were bounded. They stopped
+// inserting once they reached a cap (1024, 4096) and then rescanned everything
+// they had not already seen for the rest of the session - which is most of what
+// the strstr profile was measuring. And they never expired, so a freed guest
+// object whose address was reused by a different shader kept its old
+// classification for the life of the process.
+//
+// Dropping the whole table costs one rebuild and fixes both. The cadence
+// matches ShaderDebugPath's own, so a classification can never outlive the path
+// it was derived from.
+template <typename Map>
+void AgeShaderMemo(Map& memo, uint64_t& stamp) {
+  const uint64_t frame_now = g_guest_frame;
+  if (frame_now - stamp > kShaderPathCacheFrames || memo.size() >= kShaderPathCacheCap) {
+    memo.clear();
+    stamp = frame_now;
+  }
+}
+
+const char* ShaderDebugPath(uint8_t* base, uint32_t obj) {
+  if (obj < 0x10000) {
+    return nullptr;
+  }
+  static std::unordered_map<uint32_t, std::array<char, 120>> cache;
+  static uint64_t cache_frame = 0;
+  const uint64_t frame_now = g_guest_frame;
+  if (frame_now - cache_frame > kShaderPathCacheFrames ||
+      cache.size() >= kShaderPathCacheCap) {
+    cache.clear();
+    cache_frame = frame_now;
+  }
+  const auto it = cache.find(obj);
+  if (it != cache.end()) {
+    return it->second[0] != '\0' ? it->second.data() : nullptr;
+  }
+  std::array<char, 120> text{};
+  if (GuestReadableApprox(base, obj)) {
+    for (int k = 0; k < 119; ++k) {
+      text[k] = char(REX_LOAD_U8(obj + 0x54 + uint32_t(k)));
+      if (text[k] == '\0') {
+        break;
+      }
+    }
+  }
+  const auto ins = cache.emplace(obj, text).first;
+  return ins->second[0] != '\0' ? ins->second.data() : nullptr;
+}
+
+// Memoised "does this shader object's debug path contain this needle".
+//
+// Caching the path read was not enough. The material probes below each run
+// until their capture succeeds FOR THE FRAME, and over most of the map it never
+// does - there is no water, no ocean, no scrolling sign in view - so they matched
+// against every draw's shader path on every frame, forever. bionic's strstr
+// builds a two-way shift table per call, which is why a profile of the render
+// thread still put `twoway_strstr` at 5% of its cycles with the read already
+// free, and at 14% inside the streaming hitches.
+//
+// Needles here are string literals, so their address identifies them; a small
+// registry folds (object, needle) into one key. An unreadable path is NOT
+// memoised, so an object still loading gets another chance.
+bool ShaderPathHas(uint8_t* base, uint32_t obj, const char* needle) {
+  constexpr int kMaxNeedles = 16;
+  static const char* needles[kMaxNeedles] = {};
+  static int needle_count = 0;
+  int id = -1;
+  for (int i = 0; i < needle_count; ++i) {
+    if (needles[i] == needle) {
+      id = i;
+      break;
+    }
+  }
+  if (id < 0) {
+    if (needle_count >= kMaxNeedles) {
+      // More distinct needles than expected: fall back to matching directly
+      // rather than silently answering from the wrong key.
+      const char* text = ShaderDebugPath(base, obj);
+      return text != nullptr && std::strstr(text, needle) != nullptr;
+    }
+    id = needle_count++;
+    needles[id] = needle;
+  }
+  static std::unordered_map<uint64_t, bool> memo;
+  static uint64_t memo_frame = 0;
+  AgeShaderMemo(memo, memo_frame);
+  const uint64_t key = (uint64_t(obj) << 8) | uint64_t(id);
+  const auto it = memo.find(key);
+  if (it != memo.end()) {
+    return it->second;
+  }
+  const char* text = ShaderDebugPath(base, obj);
+  if (text == nullptr) {
+    return false;
+  }
+  const bool hit = std::strstr(text, needle) != nullptr;
+  memo.emplace(key, hit);
+  return hit;
+}
+
 void OnDrawDone(uint8_t* base, uint32_t func, uint32_t r4, uint32_t r5, uint32_t r6,
                 uint32_t r7) {
   g_draw_seq.fetch_add(1, std::memory_order_relaxed);
+  g_draws_all.fetch_add(1, std::memory_order_relaxed);
   const uint32_t flags2d = Phase2dFlags();
   if (flags2d != 0) {
     g_draws_2d.fetch_add(1, std::memory_order_relaxed);
+    for (uint32_t bit = 0; bit < 6; ++bit) {
+      if (flags2d & (1u << bit)) {
+        g_draws_2d_by_bit[bit].fetch_add(1, std::memory_order_relaxed);
+      }
+    }
   }
   // Last-draw provenance for the submit-exit capture (see g_last_draw_ibvb):
   // only an indexed 3D draw leaves a bank the palette/world capture may
@@ -4782,28 +5243,22 @@ void OnDrawDone(uint8_t* base, uint32_t func, uint32_t r4, uint32_t r5, uint32_t
       // families that share the c10.x/c11.y layout are eligible.
       const auto env_receiver_ps = [&]() -> bool {
         const auto check = [&](uint32_t obj) -> int {  // 0 unknown, 1 no, 2 yes
-          if (obj < 0x10000 || !GuestReadableApprox(base, obj)) {
-            return 0;
-          }
-          static std::unordered_map<uint32_t, int> cache;
-          auto it = cache.find(obj);
-          if (it != cache.end()) {
+          static std::unordered_map<uint32_t, int> memo;
+          static uint64_t memo_frame = 0;
+          AgeShaderMemo(memo, memo_frame);
+          const auto it = memo.find(obj);
+          if (it != memo.end()) {
             return it->second;
           }
-          char text[120] = {};
-          for (int k = 0; k < 119; ++k) {
-            text[k] = char(REX_LOAD_U8(obj + 0x54 + k));
-            if (text[k] == '\0') break;
+          const char* text = ShaderDebugPath(base, obj);
+          if (text == nullptr) {
+            return 0;  // unreadable or empty: unknown, and not memoised
           }
           const bool hit = std::strstr(text, "\\baseenvironment") != nullptr ||
                            std::strstr(text, "\\defaultenvironment") != nullptr ||
                            std::strstr(text, "\\decalenvironment") != nullptr;
-          // Empty/garbled paths stay unknown (0) and are not cached-in as
-          // negatives forever.
-          const int result = text[0] == '\0' ? 0 : (hit ? 2 : 1);
-          if (result != 0 && cache.size() < 4096) {
-            cache.emplace(obj, result);
-          }
+          const int result = hit ? 2 : 1;
+          memo.emplace(obj, result);
           return result;
         };
         const int a = check(g_cur_ps_obj.load(std::memory_order_relaxed));
@@ -4891,15 +5346,7 @@ void OnDrawDone(uint8_t* base, uint32_t func, uint32_t r4, uint32_t r5, uint32_t
       if (!g_water_frame_done && ps_bank != 0) {
         const auto water_ps = [&]() -> bool {
           const auto check = [&](uint32_t obj) -> bool {
-            if (obj < 0x10000 || !GuestReadableApprox(base, obj)) {
-              return false;
-            }
-            char text[120] = {};
-            for (int k = 0; k < 119; ++k) {
-              text[k] = char(REX_LOAD_U8(obj + 0x54 + k));
-              if (text[k] == '\0') break;
-            }
-            return std::strstr(text, "\\flowingwateralpha") != nullptr;
+            return ShaderPathHas(base, obj, "\\flowingwateralpha");
           };
           return check(g_cur_ps_obj.load(std::memory_order_relaxed)) ||
                  check(g_cur_vs_obj.load(std::memory_order_relaxed));
@@ -4957,15 +5404,7 @@ void OnDrawDone(uint8_t* base, uint32_t func, uint32_t r4, uint32_t r5, uint32_t
       if (!g_scroll_frame_done && ps_bank != 0) {
         const auto scroll_ps = [&]() -> bool {
           const auto check = [&](uint32_t obj) -> bool {
-            if (obj < 0x10000 || !GuestReadableApprox(base, obj)) {
-              return false;
-            }
-            char text[120] = {};
-            for (int k = 0; k < 119; ++k) {
-              text[k] = char(REX_LOAD_U8(obj + 0x54 + k));
-              if (text[k] == '\0') break;
-            }
-            return std::strstr(text, "\\scrollincandescent") != nullptr;
+            return ShaderPathHas(base, obj, "\\scrollincandescent");
           };
           return check(g_cur_ps_obj.load(std::memory_order_relaxed)) ||
                  check(g_cur_vs_obj.load(std::memory_order_relaxed));
@@ -4995,15 +5434,7 @@ void OnDrawDone(uint8_t* base, uint32_t func, uint32_t r4, uint32_t r5, uint32_t
       if ((!g_ocean_frame_done || !g_oceanrefl_frame_done) && ps_bank != 0) {
         const auto ps_name_has = [&](const char* needle) -> bool {
           const auto check = [&](uint32_t obj) -> bool {
-            if (obj < 0x10000 || !GuestReadableApprox(base, obj)) {
-              return false;
-            }
-            char text[120] = {};
-            for (int k = 0; k < 119; ++k) {
-              text[k] = char(REX_LOAD_U8(obj + 0x54 + k));
-              if (text[k] == '\0') break;
-            }
-            return std::strstr(text, needle) != nullptr;
+            return ShaderPathHas(base, obj, needle);
           };
           return check(g_cur_ps_obj.load(std::memory_order_relaxed)) ||
                  check(g_cur_vs_obj.load(std::memory_order_relaxed));
@@ -5162,14 +5593,15 @@ void OnDrawDone(uint8_t* base, uint32_t func, uint32_t r4, uint32_t r5, uint32_t
             return 0;
           }
           static std::unordered_map<uint32_t, int> cache;
+          static uint64_t cache_frame = 0;
+          AgeShaderMemo(cache, cache_frame);
           auto it = cache.find(obj);
           if (it != cache.end()) {
             return it->second;
           }
-          char text[96] = {};
-          for (int k = 0; k < 95; ++k) {
-            text[k] = char(REX_LOAD_U8(obj + 0x54 + k));
-            if (text[k] == '\0') break;
+          const char* text = ShaderDebugPath(base, obj);
+          if (text == nullptr) {
+            return 0;
           }
           int fam = 0;
           if (std::strstr(text, "\\tree_defaultPS") != nullptr ||
@@ -5304,20 +5736,19 @@ void OnDrawDone(uint8_t* base, uint32_t func, uint32_t r4, uint32_t r5, uint32_t
       }
       // Guest-render-thread only (like the fog capture globals).
       static std::unordered_map<uint32_t, bool> cache;
+      static uint64_t cache_frame = 0;
+      AgeShaderMemo(cache, cache_frame);
       auto it = cache.find(obj);
       if (it != cache.end()) {
         return it->second;
       }
       // Debug path at +0x54, e.g. ".../blur_hBlurPS.updb".
-      char text[96] = {};
-      for (int k = 0; k < 95; ++k) {
-        text[k] = char(REX_LOAD_U8(obj + 0x54 + k));
-        if (text[k] == '\0') break;
+      const char* text = ShaderDebugPath(base, obj);
+      if (text == nullptr) {
+        return false;
       }
       const bool hit = std::strstr(text, "blur_hBlurPS") != nullptr;
-      if (cache.size() < 1024) {
-        cache.emplace(obj, hit);
-      }
+      cache.emplace(obj, hit);
       return hit;
     };
     // Shader labels can be swapped in the hook; accept either slot.
@@ -5388,14 +5819,15 @@ void OnDrawDone(uint8_t* base, uint32_t func, uint32_t r4, uint32_t r5, uint32_t
         return 0;
       }
       static std::unordered_map<uint32_t, int> cache;
+      static uint64_t cache_frame = 0;
+      AgeShaderMemo(cache, cache_frame);
       auto it = cache.find(obj);
       if (it != cache.end()) {
         return it->second;
       }
-      char text[120] = {};
-      for (int k = 0; k < 119; ++k) {
-        text[k] = char(REX_LOAD_U8(obj + 0x54 + k));
-        if (text[k] == '\0') break;
+      const char* text = ShaderDebugPath(base, obj);
+      if (text == nullptr) {
+        return 0;
       }
       int fam = 0;
       if (std::strstr(text, "\\sky_") != nullptr) {
@@ -5406,9 +5838,7 @@ void OnDrawDone(uint8_t* base, uint32_t func, uint32_t r4, uint32_t r5, uint32_t
       } else if (std::strstr(text, "postfx_edgedetectstencil") != nullptr) {
         fam = 3;
       }
-      if (cache.size() < 4096) {
-        cache.emplace(obj, fam);
-      }
+      cache.emplace(obj, fam);
       return fam;
     };
     // Shader labels can be swapped in the hook; accept either slot.
@@ -5490,9 +5920,10 @@ void OnDrawDone(uint8_t* base, uint32_t func, uint32_t r4, uint32_t r5, uint32_t
       // guest range before eventually rejecting its layout. RP5 reports show
       // the guest render thread occasionally stopping at exactly this stage
       // while audio remains alive.
-      if (device != 0 && r7 >= 0x10000 && supported_primitive &&
-          supported_stride && r5 != 0 && r5 <= 32768 &&
-          payload_bytes <= (1u << 20)) {
+      const bool recordable = device != 0 && r7 >= 0x10000 && supported_primitive &&
+          supported_stride && r5 != 0 && r5 <= 32768 && payload_bytes <= (1u << 20);
+      if (!recordable) g_2d_gate_reject.fetch_add(1, std::memory_order_relaxed);
+      if (recordable) {
         Draw2d d;
         d.prim = r4;
         d.count = r5;
@@ -7985,6 +8416,7 @@ void Publish2dDraws(uint8_t* base) {
     std::lock_guard<std::mutex> lock(g_2d_mutex);
     frame_2d.swap(g_frame_2d);
   }
+  g_2d_capin.store(uint32_t(frame_2d.size()), std::memory_order_relaxed);
   static thread_local std::vector<uint8_t> scratch_2d;
   std::vector<Draw2d> published;
   published.reserve(frame_2d.size());
@@ -8042,6 +8474,7 @@ void Publish2dDraws(uint8_t* base) {
     source_bytes_this_frame += bytes;
     scratch_2d.resize(bytes);
     if (!GuestTryCopy(scratch_2d.data(), base + d.addr, bytes)) {
+      g_2d_copyfail.fetch_add(1, std::memory_order_relaxed);
       continue;
     }
     // Guest dwords are big-endian.
@@ -8533,6 +8966,38 @@ void ApplyPublishedCameraAspect(FrameScene& scene, float scale) {
   }
 }
 
+// Publish-gate census, behind skate3_native_render_scene_publish_census. One
+// aggregate line per 300 builds: the running mix of the two silent early exits
+// plus the shape of the LAST frame's views, which is what says whether the game
+// is submitting no scene views at all or submitting ones the perspective /
+// aspect test rejects.
+void CensusReport(uint32_t records, uint32_t views, uint32_t cam_ok, uint32_t persp,
+                  uint32_t aux, float persp_w, float m00, float m11,
+                  bool picked = false) {
+  static std::atomic<uint64_t> s_calls{0};
+  static std::atomic<uint64_t> s_no_records{0};
+  static std::atomic<uint64_t> s_no_view{0};
+  static std::atomic<uint64_t> s_picked{0};
+  if (picked) {
+    s_picked.fetch_add(1, std::memory_order_relaxed);
+  } else if (records == 0) {
+    s_no_records.fetch_add(1, std::memory_order_relaxed);
+  } else {
+    s_no_view.fetch_add(1, std::memory_order_relaxed);
+  }
+  const uint64_t n = s_calls.fetch_add(1, std::memory_order_relaxed) + 1;
+  if (n % 300 != 0) {
+    return;
+  }
+  REXLOG_INFO(
+      "native-scene: publish census {} builds [no_records={} no_view={} published={}] "
+      "last: records={} views={} cam_ok={} persp={} aux_rejected={} persp_w={:.3f} "
+      "m00={:.3f} m11={:.3f}",
+      n, s_no_records.load(std::memory_order_relaxed),
+      s_no_view.load(std::memory_order_relaxed), s_picked.load(std::memory_order_relaxed),
+      records, views, cam_ok, persp, aux, persp_w, m00, m11);
+}
+
 void BuildFrameScene(uint8_t* base, const SubmitRecord* records, size_t count) {
   if (!SceneEnabled()) {
     return;
@@ -8564,12 +9029,17 @@ void BuildFrameScene(uint8_t* base, const SubmitRecord* records, size_t count) {
     // Attribute dips: the previous frame stretched the interval - log its
     // phase breakdown. "rest" = the game's own frame work + hook overhead
     // outside the build (dt minus our measured blocks).
-    if (dt_ms >= 4.5 && dt_ms < 100.0 &&
+    if (dt_ms >= 4.5 &&
+        dt_ms < double(REXCVAR_GET(skate3_native_render_scene_slow_frame_max_ms)) &&
         g_slow_frame_log_budget.load(std::memory_order_relaxed) > 0 &&
         g_slow_frame_log_budget.fetch_sub(1, std::memory_order_relaxed) > 0) {
       const double ours_ms =
           double(s_prev_build_ns + s_prev_cap_ns) * 1e-6;
-      REXLOG_DEBUG(
+      // INFO, not DEBUG: iOS never raises log_level, so at DEBUG this line -
+      // the only per-frame attribution of a dip - has never once reached a
+      // device log. g_slow_frame_log_budget already bounds it to 3 per perf
+      // window, so the volume is a few lines a minute, not a flood.
+      REXLOG_INFO(
           "native-scene: slow guest frame dt={:.2f}ms prev[cap={:.2f} build={:.2f} "
           "(2d={:.2f} spl={:.2f} pal={:.2f} ptail={:.2f} walk={:.2f}) rest={:.2f}]ms",
           dt_ms, double(s_prev_cap_ns) * 1e-6, double(s_prev_build_ns) * 1e-6,
@@ -8685,7 +9155,18 @@ void BuildFrameScene(uint8_t* base, const SubmitRecord* records, size_t count) {
   g_sky_seen_this_frame = false;
   const bool outline_edge_seen = g_outline_edge_seen;
   g_outline_edge_seen = false;
+  // Publish-gate census (skate3_native_render_scene_publish_census): when the
+  // renderer never takes over, the question is always WHICH of this function's
+  // two early exits is firing - the guest submitted nothing at all, or it
+  // submitted views none of which read as the screen-shaped perspective one.
+  // Nothing downstream logs that, because both exits are silent by design.
+  const bool census = REXCVAR_GET(skate3_native_render_scene_publish_census);
+  uint32_t census_views = 0, census_cam_ok = 0, census_persp = 0, census_aux = 0;
+  float census_persp_w = 0.0f, census_m00 = 0.0f, census_m11 = 0.0f;
   if (count == 0) {
+    if (census) {
+      CensusReport(0, 0, 0, 0, 0, 0.0f, 0.0f, 0.0f);
+    }
     return;
   }
 
@@ -8700,12 +9181,18 @@ void BuildFrameScene(uint8_t* base, const SubmitRecord* records, size_t count) {
     if (r.kind != 1 || r.c == 0) {
       continue;
     }
+    ++census_views;
     const uint32_t cam = REX_LOAD_U32(r.c + kViewCameraFromView);
     if (!GuestReadableApprox(base, cam)) {
       continue;
     }
+    ++census_cam_ok;
     const float persp_w = LoadGuestF32(base, cam + 0x60 + (2 * 4 + 3) * 4);
+    if (census && census_persp_w == 0.0f) {
+      census_persp_w = persp_w;
+    }
     if (persp_w == 1.0f) {
+      ++census_persp;
       // Screen-shaped views only. The skater-portrait render-to-texture
       // passes (team menu boxes, Import Skater card) submit their OWN
       // perspective SceneRenderView with a tall narrow projection; picking
@@ -8717,7 +9204,12 @@ void BuildFrameScene(uint8_t* base, const SubmitRecord* records, size_t count) {
       // raw projection; every real screen view is >= 4:3.
       const float m00 = std::fabs(LoadGuestF32(base, cam + 0x60 + 0 * 4));
       const float m11 = std::fabs(LoadGuestF32(base, cam + 0x60 + (1 * 4 + 1) * 4));
+      if (census && census_m00 == 0.0f) {
+        census_m00 = m00;
+        census_m11 = m11;
+      }
       if (!(m00 > 1e-6f) || m11 < m00 * 1.2f) {
+        ++census_aux;
         static std::atomic<uint64_t> s_aux_views{0};
         const uint64_t n = s_aux_views.fetch_add(1, std::memory_order_relaxed);
         if (n < 4 || (n & 255u) == 0) {
@@ -8734,7 +9226,15 @@ void BuildFrameScene(uint8_t* base, const SubmitRecord* records, size_t count) {
     }
   }
   if (view == 0) {
+    if (census) {
+      CensusReport(uint32_t(count), census_views, census_cam_ok, census_persp,
+                   census_aux, census_persp_w, census_m00, census_m11);
+    }
     return;
+  }
+  if (census) {
+    CensusReport(uint32_t(count), census_views, census_cam_ok, census_persp, census_aux,
+                 census_persp_w, census_m00, census_m11, /*picked=*/true);
   }
 
   FrameScene scene;
@@ -8765,9 +9265,10 @@ void BuildFrameScene(uint8_t* base, const SubmitRecord* records, size_t count) {
   std::unordered_map<uint32_t, DrawItem> sortlist_local_by_ctx;
 #if REX_PLATFORM_ANDROID
   // Static geometry is immutable between streamer fixups. Refresh its full
-  // guest-side scene walk at 7.5 Hz and reuse it between refreshes; dynamic
+  // guest-side scene walk at 7.5 Hz in Performance only; Quality refreshes
+  // every frame, as in Andrew's renderer. Dynamic
   // captures (skater, NPCs, cloth, vehicles) still update every guest tick.
-  const bool refresh_android_statics = (g_guest_frame & 7u) == 0u;
+  const bool refresh_android_statics = !HandheldPotatoEnabled() || (g_guest_frame & 7u) == 0u;
   std::vector<DrawItem> android_statics;
   if (!refresh_android_statics) {
     std::lock_guard<std::mutex> lock(g_item_cache_mutex);
@@ -9274,7 +9775,12 @@ void BuildFrameScene(uint8_t* base, const SubmitRecord* records, size_t count) {
         LwRetained& r = it->second;
         float alpha = 1.0f;
         uint32_t entity = 0;
-        if (now - r.frame > 2 ||
+        // The window has to cover the throttle: an NPC whose manager update
+        // was skipped has no fresh record through no fault of its own, and
+        // dropping it would show as the blink this gap fill exists to stop.
+        const uint64_t lw_gap =
+            2 + uint64_t(std::max(0, REXCVAR_GET(skate3_native_render_lw_refresh) - 1));
+        if (now - r.frame > lw_gap ||
             !skate3::native_lw::LookupLwCtx(it->first, &alpha, &entity)) {
           it = g_lw_last_items.erase(it);
           continue;

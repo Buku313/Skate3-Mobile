@@ -550,6 +550,24 @@ inline std::atomic<uint64_t> g_draws_2d{0};
 // only the BeginVertices inline path, verified by capture).
 inline std::atomic<uint64_t> g_draws_2d_other{0};
 inline std::atomic<uint64_t> g_draws_2d_dropped{0};
+// Every guest draw, tagged or not. A black menu with the renderer drawing
+// 100% of what it is handed (pending==drawn_2d) means the draws never got
+// TAGGED, so the only question left is whether the guest issued any: this is
+// the denominator that answers it.
+inline std::atomic<uint64_t> g_draws_all{0};
+// The three places a 2D quad can vanish without being counted, which is why
+// a black menu read as "the guest sent nothing" for a whole session:
+//   gate    - BeginVertices parameters outside the accepted ranges
+//   copyfail- the guest vertex data could not be read back
+//   capin   - how many quads reached the publish step at all
+inline std::atomic<uint64_t> g_2d_gate_reject{0};
+inline std::atomic<uint64_t> g_2d_copyfail{0};
+inline std::atomic<uint32_t> g_2d_capin{0};
+// Per-bracket attribution for the six On2dPhase bits, so a missing hook names
+// itself instead of being guessed at. Bits, in order: FrontEndManager::Render2D,
+// AptMovieIntegration::Render, AptRenderingIntegration::DrawRenderingUnit,
+// UpdateRenderToTexture, cFont::DrawstringLocal, SimpleDraw.
+inline std::atomic<uint64_t> g_draws_2d_by_bit[6] = {};
 // Large-art async decode routing (see skate3_native_render_scene_2d_async_px):
 // quads skipped while their first decode is in flight on the workers, and
 // stale decodes served while a content-change re-decode is in flight.
