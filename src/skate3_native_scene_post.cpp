@@ -225,6 +225,119 @@ bool EnsureSsaoPipeline(const NativeGuestOutputRenderContext& context) {
 // guest output (which must be in RENDER_TARGET state). Returns true when it
 // drew; binding layout/state was changed and the caller restores the main
 // pass's bindings.
+// Tile-MAX reduce the linearized depth into the small R32F occlusion grid and
+// queue a never-waited copy into the readback ring (the photo-grab pattern;
+// consumed 1-2 frames later by the item classifier / cull in RenderScene).
+// Any creation failure disables only these consumers.
+//
+// Shared by ApplySsaoPass and ApplyOcclusionGridPass: the grid is a side effect
+// the cull needs, NOT an ambient-occlusion product, so it must not depend on
+// whether SSAO is enabled. Requires g_r.ao_lin_srv to be live and readable.
+static void EmitOcclusionGridReduce(nrhi::Device* device, nrhi::Cmd* cmd,
+                                    const FrameScene& scene, uint32_t width,
+                                    uint32_t height) {
+  if (g_r.occl_failed) {
+    return;
+  }
+  if (g_r.pso_occl_reduce == nullptr) {
+    nrhi::Shader* rvs = device->CreateShader(
+        MakeShaderDesc(nrhi::ShaderStage::kVertex, "ssao.hlsl",
+                       kSsaoShaderSource, "vs_main", nullptr, ""));
+    nrhi::Shader* rps = device->CreateShader(
+        MakeShaderDesc(nrhi::ShaderStage::kPixel, "ssao.hlsl",
+                       kSsaoShaderSource, "ps_depth_max", nullptr, ""));
+    if (rvs != nullptr && rps != nullptr) {
+      nrhi::GraphicsPipelineDesc rp;
+      rp.layout = g_r.ao_layout;
+      rp.vs = rvs;
+      rp.ps = rps;
+      rp.cull = nrhi::CullMode::kNone;
+      rp.sample_count = 1;
+      rp.rtv_format = nrhi::Format::kR32_FLOAT;
+      g_r.pso_occl_reduce = device->CreateGraphicsPipeline(rp);
+    }
+    if (rvs != nullptr) {
+      device->DestroyDeferred(rvs);
+    }
+    if (rps != nullptr) {
+      device->DestroyDeferred(rps);
+    }
+    if (g_r.pso_occl_reduce == nullptr) {
+      g_r.occl_failed = true;
+      REXLOG_WARN(
+          "native-scene: occlusion-grid PSO creation failed - occluded-item "
+          "attribution disabled");
+      return;
+    }
+  }
+  if (g_r.occl_tex == nullptr) {
+    nrhi::TextureDesc td;
+    td.width = RendererState::kOcclGridW;
+    td.height = RendererState::kOcclGridH;
+    td.mip_levels = 1;
+    td.format = nrhi::Format::kR32_FLOAT;
+    // The grid is read back to the CPU every frame, so it must declare
+    // copy-source usage: the Vulkan backend only requests TRANSFER_SRC for
+    // textures that ask for it, and both the transition to the copy-source
+    // state and the copy itself are invalid without it.
+    td.usage = nrhi::kTextureUsageRenderTarget | nrhi::kTextureUsageCopySource;
+    td.initial_state = nrhi::ResourceState::kRenderTarget;
+    g_r.occl_tex = device->CreateTexture(td);
+    nrhi::BufferDesc bd;
+    bd.size = uint64_t(RendererState::kOcclRowPitch) * RendererState::kOcclGridH;
+    bd.heap = nrhi::HeapKind::kReadback;
+    for (int i = 0; i < 2 && g_r.occl_tex != nullptr; ++i) {
+      g_r.occl_readback[i] = device->CreateBuffer(bd);
+      if (g_r.occl_readback[i] == nullptr ||
+          (g_r.occl_readback_ptr[i] = static_cast<uint8_t*>(
+               device->Map(g_r.occl_readback[i]))) == nullptr) {
+        break;
+      }
+    }
+    if (g_r.occl_tex == nullptr || g_r.occl_readback_ptr[1] == nullptr) {
+      g_r.occl_failed = true;
+      REXLOG_WARN(
+          "native-scene: occlusion-grid readback creation failed - "
+          "occluded-item attribution disabled");
+      return;
+    }
+  }
+  // Skip the frame rather than ever waiting when both ring slots are
+  // still in flight (the consumer retires completed slots).
+  const int w = g_r.occl_write_index;
+  if (g_r.occl_pending[w] &&
+      g_r.occl_submission[w] >= device->CompletedSubmission()) {
+    return;
+  }
+  float rc[4] = {float(width), float(height), float(RendererState::kOcclGridW),
+                 float(RendererState::kOcclGridH)};
+  cmd->SetRootConstants(0, 4, rc, 0);
+  cmd->SetViewport(nrhi::Viewport{0.0f, 0.0f, float(RendererState::kOcclGridW),
+                                  float(RendererState::kOcclGridH), 0.0f,
+                                  1.0f});
+  cmd->SetScissor(nrhi::Rect{0, 0, int32_t(RendererState::kOcclGridW),
+                             int32_t(RendererState::kOcclGridH)});
+  cmd->SetRenderTargets(g_r.occl_tex, nullptr);
+  cmd->SetPipeline(g_r.pso_occl_reduce);
+  cmd->SetTexture(1, g_r.ao_lin_srv);
+  cmd->Draw(3, 0);
+  cmd->Barrier(g_r.occl_tex, nrhi::ResourceState::kRenderTarget,
+               nrhi::ResourceState::kCopySource);
+  cmd->FlushBarriers();
+  cmd->CopyTextureToBuffer(g_r.occl_readback[w], 0,
+                           RendererState::kOcclRowPitch, g_r.occl_tex, 0,
+                           RendererState::kOcclGridW,
+                           RendererState::kOcclGridH);
+  cmd->Barrier(g_r.occl_tex, nrhi::ResourceState::kCopySource,
+               nrhi::ResourceState::kRenderTarget);
+  cmd->FlushBarriers();
+  std::memcpy(g_r.occl_vp[w], scene.view_proj, sizeof(g_r.occl_vp[w]));
+  std::memcpy(g_r.occl_cam[w], scene.cam_pos, sizeof(g_r.occl_cam[w]));
+  g_r.occl_submission[w] = device->CurrentSubmission();
+  g_r.occl_pending[w] = true;
+  g_r.occl_write_index = 1 - w;
+}
+
 bool ApplySsaoPass(const NativeGuestOutputRenderContext& context,
                    nrhi::Cmd* cmd, const FrameScene& scene,
                    const nrhi::Viewport& viewport, const nrhi::Rect& scissor) {
@@ -443,112 +556,9 @@ bool ApplySsaoPass(const NativeGuestOutputRenderContext& context,
                  nrhi::ResourceState::kRenderTarget);
   }
 
-  // Occlusion grid (perf-items attribution AND the occlusion cull): while
-  // the linear depth is still bound as an SRV, tile-MAX reduce it into the
-  // small R32F grid and queue a never-waited copy into the readback ring
-  // (the photo-grab pattern; consumed 1-2 frames later by the item
-  // classifier / cull in RenderScene). Any creation failure disables only
-  // these consumers.
-  if ((REXCVAR_GET(skate3_native_render_scene_perf_items) ||
-       REXCVAR_GET(skate3_native_render_scene_occlusion_cull)) &&
-      !g_r.occl_failed) {
-    if (g_r.pso_occl_reduce == nullptr) {
-      nrhi::Shader* rvs = device->CreateShader(
-          MakeShaderDesc(nrhi::ShaderStage::kVertex, "ssao.hlsl",
-                         kSsaoShaderSource, "vs_main", nullptr, ""));
-      nrhi::Shader* rps = device->CreateShader(
-          MakeShaderDesc(nrhi::ShaderStage::kPixel, "ssao.hlsl",
-                         kSsaoShaderSource, "ps_depth_max", nullptr, ""));
-      if (rvs != nullptr && rps != nullptr) {
-        nrhi::GraphicsPipelineDesc rp;
-        rp.layout = g_r.ao_layout;
-        rp.vs = rvs;
-        rp.ps = rps;
-        rp.cull = nrhi::CullMode::kNone;
-        rp.sample_count = 1;
-        rp.rtv_format = nrhi::Format::kR32_FLOAT;
-        g_r.pso_occl_reduce = device->CreateGraphicsPipeline(rp);
-      }
-      if (rvs != nullptr) {
-        device->DestroyDeferred(rvs);
-      }
-      if (rps != nullptr) {
-        device->DestroyDeferred(rps);
-      }
-      if (g_r.pso_occl_reduce == nullptr) {
-        g_r.occl_failed = true;
-        REXLOG_WARN(
-            "native-scene: occlusion-grid PSO creation failed - occluded-item "
-            "attribution disabled");
-      }
-    }
-    if (!g_r.occl_failed && g_r.occl_tex == nullptr) {
-      nrhi::TextureDesc td;
-      td.width = RendererState::kOcclGridW;
-      td.height = RendererState::kOcclGridH;
-      td.mip_levels = 1;
-      td.format = nrhi::Format::kR32_FLOAT;
-      // The grid is read back to the CPU every frame, so it must declare
-      // copy-source usage: the Vulkan backend only requests TRANSFER_SRC for
-      // textures that ask for it, and both the transition to the copy-source
-      // state and the copy itself are invalid without it.
-      td.usage = nrhi::kTextureUsageRenderTarget | nrhi::kTextureUsageCopySource;
-      td.initial_state = nrhi::ResourceState::kRenderTarget;
-      g_r.occl_tex = device->CreateTexture(td);
-      nrhi::BufferDesc bd;
-      bd.size = uint64_t(RendererState::kOcclRowPitch) * RendererState::kOcclGridH;
-      bd.heap = nrhi::HeapKind::kReadback;
-      for (int i = 0; i < 2 && g_r.occl_tex != nullptr; ++i) {
-        g_r.occl_readback[i] = device->CreateBuffer(bd);
-        if (g_r.occl_readback[i] == nullptr ||
-            (g_r.occl_readback_ptr[i] = static_cast<uint8_t*>(
-                 device->Map(g_r.occl_readback[i]))) == nullptr) {
-          break;
-        }
-      }
-      if (g_r.occl_tex == nullptr || g_r.occl_readback_ptr[1] == nullptr) {
-        g_r.occl_failed = true;
-        REXLOG_WARN(
-            "native-scene: occlusion-grid readback creation failed - "
-            "occluded-item attribution disabled");
-      }
-    }
-    // Skip the frame rather than ever waiting when both ring slots are
-    // still in flight (the consumer retires completed slots).
-    const int w = g_r.occl_write_index;
-    if (!g_r.occl_failed &&
-        (!g_r.occl_pending[w] ||
-         g_r.occl_submission[w] < device->CompletedSubmission())) {
-      float rc[4] = {float(width), float(height),
-                     float(RendererState::kOcclGridW),
-                     float(RendererState::kOcclGridH)};
-      cmd->SetRootConstants(0, 4, rc, 0);
-      cmd->SetViewport(nrhi::Viewport{0.0f, 0.0f,
-                                      float(RendererState::kOcclGridW),
-                                      float(RendererState::kOcclGridH), 0.0f,
-                                      1.0f});
-      cmd->SetScissor(nrhi::Rect{0, 0, int32_t(RendererState::kOcclGridW),
-                                 int32_t(RendererState::kOcclGridH)});
-      cmd->SetRenderTargets(g_r.occl_tex, nullptr);
-      cmd->SetPipeline(g_r.pso_occl_reduce);
-      cmd->SetTexture(1, g_r.ao_lin_srv);
-      cmd->Draw(3, 0);
-      cmd->Barrier(g_r.occl_tex, nrhi::ResourceState::kRenderTarget,
-                   nrhi::ResourceState::kCopySource);
-      cmd->FlushBarriers();
-      cmd->CopyTextureToBuffer(g_r.occl_readback[w], 0,
-                               RendererState::kOcclRowPitch, g_r.occl_tex, 0,
-                               RendererState::kOcclGridW,
-                               RendererState::kOcclGridH);
-      cmd->Barrier(g_r.occl_tex, nrhi::ResourceState::kCopySource,
-                   nrhi::ResourceState::kRenderTarget);
-      cmd->FlushBarriers();
-      std::memcpy(g_r.occl_vp[w], scene.view_proj, sizeof(g_r.occl_vp[w]));
-      std::memcpy(g_r.occl_cam[w], scene.cam_pos, sizeof(g_r.occl_cam[w]));
-      g_r.occl_submission[w] = device->CurrentSubmission();
-      g_r.occl_pending[w] = true;
-      g_r.occl_write_index = 1 - w;
-    }
+  if (REXCVAR_GET(skate3_native_render_scene_perf_items) ||
+      REXCVAR_GET(skate3_native_render_scene_occlusion_cull)) {
+    EmitOcclusionGridReduce(device, cmd, scene, width, height);
   }
 
   // Restore intermediate steady states.
@@ -557,6 +567,135 @@ bool ApplySsaoPass(const NativeGuestOutputRenderContext& context,
   cmd->Barrier(g_r.ao_lin_depth, nrhi::ResourceState::kPixelShaderResource,
                nrhi::ResourceState::kRenderTarget);
   cmd->Barrier(g_r.ao_luma, nrhi::ResourceState::kPixelShaderResource,
+               nrhi::ResourceState::kRenderTarget);
+  cmd->FlushBarriers();
+  return true;
+}
+
+// The occlusion grid WITHOUT the ambient occlusion. Historically the tile-MAX
+// reduce lived inside ApplySsaoPass because that is where a linearized depth
+// already exists - which quietly made the occlusion CULL depend on SSAO being
+// enabled. iOS hard-disables SSAO (a full-screen intermediate per effect), so
+// on device the grid was never produced, occl_grid_valid was never set, and the
+// cull silently did nothing: measured occl_culled=0 in every session ever
+// captured. Turning SSAO on to get the grid works, but pays a GTAO march, two
+// blurs and a composite for a term we do not want.
+//
+// This runs only what the grid needs: linearize scene depth, then reduce. It
+// leaves ao_tex/ao_luma untouched (never even allocated when SSAO stays off).
+// If SSAO is later enabled its own ensure block rebuilds the whole set, because
+// that block also keys on ao_luma being null.
+bool ApplyOcclusionGridPass(const NativeGuestOutputRenderContext& context,
+                            nrhi::Cmd* cmd, const FrameScene& scene,
+                            const nrhi::Viewport& viewport,
+                            const nrhi::Rect& scissor) {
+  if (g_r.occl_failed || g_r.ao_failed) {
+    return false;
+  }
+  // Same guard as ApplySsaoPass: the published projection must be the live
+  // perspective matrix (row-vector m23 == 1; all zeros until the first publish).
+  const float* pr = scene.proj;
+  if (pr[11] != 1.0f || pr[0] == 0.0f || pr[5] == 0.0f || pr[14] == 0.0f) {
+    return false;
+  }
+  if (!EnsureSsaoPipeline(context)) {
+    return false;
+  }
+  nrhi::Device* device = context.device;
+  const uint32_t width = context.guest_output_width;
+  const uint32_t height = context.guest_output_height;
+
+  // Only the full-res linear-depth target, not the AO raster set.
+  if (g_r.ao_lin_width != width || g_r.ao_lin_height != height ||
+      g_r.ao_lin_depth == nullptr) {
+    if (g_r.ao_lin_srv != nullptr) {
+      device->DestroyDeferred(g_r.ao_lin_srv);
+      g_r.ao_lin_srv = nullptr;
+    }
+    if (g_r.ao_lin_depth != nullptr) {
+      device->DestroyDeferred(g_r.ao_lin_depth);
+      g_r.ao_lin_depth = nullptr;
+    }
+    nrhi::TextureDesc desc;
+    desc.width = width;
+    desc.height = height;
+    desc.mip_levels = 1;
+    desc.format = nrhi::Format::kR32_FLOAT;
+    desc.usage = nrhi::kTextureUsageRenderTarget;
+    desc.initial_state = nrhi::ResourceState::kRenderTarget;
+    g_r.ao_lin_depth = device->CreateTexture(desc);
+    if (g_r.ao_lin_depth == nullptr) {
+      g_r.ao_failed = true;
+      return false;
+    }
+    nrhi::TextureViewDesc vd;
+    vd.mip_levels = 1;
+    g_r.ao_lin_srv = device->CreateTextureView(g_r.ao_lin_depth, vd);
+    if (g_r.ao_lin_srv == nullptr) {
+      g_r.ao_failed = true;
+      return false;
+    }
+    g_r.ao_lin_width = width;
+    g_r.ao_lin_height = height;
+  }
+  // Scene-depth SRV, re-pointed when the depth buffer is rebuilt (resize /
+  // MSAA change). D32 textures view as R32_FLOAT automatically.
+  if (g_r.ao_depth_srv == nullptr || g_r.ao_depth_srv_of != g_r.depth) {
+    if (g_r.ao_depth_srv != nullptr) {
+      device->DestroyDeferred(g_r.ao_depth_srv);
+      g_r.ao_depth_srv = nullptr;
+    }
+    nrhi::TextureViewDesc sd;
+    if (g_r.msaa > 1) {
+      sd.dimension = nrhi::ViewDimension::k2DMS;
+    } else {
+      sd.dimension = nrhi::ViewDimension::k2D;
+      sd.mip_levels = 1;
+    }
+    g_r.ao_depth_srv = device->CreateTextureView(g_r.depth, sd);
+    if (g_r.ao_depth_srv == nullptr) {
+      g_r.ao_failed = true;
+      return false;
+    }
+    g_r.ao_depth_srv_of = g_r.depth;
+  }
+
+  // b0 rows: only the size and the projection terms matter here - the
+  // linearize shader reads m22/m32, and the reduce overwrites rows 0-3 itself.
+  float c[16] = {};
+  c[0] = float(width);
+  c[1] = float(height);
+  c[2] = 1.0f / float(width);
+  c[3] = 1.0f / float(height);
+  c[4] = std::fabs(pr[0]);
+  c[5] = std::fabs(pr[5]);
+  c[6] = pr[10];
+  c[7] = pr[14];
+
+  cmd->SetBindingLayout(g_r.ao_layout);
+  cmd->SetPrimitiveTopology(nrhi::PrimitiveTopology::kTriangleList);
+  cmd->SetViewport(viewport);
+  cmd->SetScissor(scissor);
+  cmd->SetRootConstants(0, 16, c, 0);
+
+  // Scene depth -> linear view Z (sample 0 when MSAA). Full res.
+  cmd->Barrier(g_r.depth, nrhi::ResourceState::kDepthWrite,
+               nrhi::ResourceState::kPixelShaderResource);
+  cmd->FlushBarriers();
+  cmd->SetRenderTargets(g_r.ao_lin_depth, nullptr);
+  cmd->SetPipeline(g_r.pso_ao_linearize);
+  cmd->SetTexture(1, g_r.ao_depth_srv);
+  cmd->Draw(3, 0);
+  cmd->Barrier(g_r.depth, nrhi::ResourceState::kPixelShaderResource,
+               nrhi::ResourceState::kDepthWrite);
+  cmd->Barrier(g_r.ao_lin_depth, nrhi::ResourceState::kRenderTarget,
+               nrhi::ResourceState::kPixelShaderResource);
+  cmd->FlushBarriers();
+
+  EmitOcclusionGridReduce(device, cmd, scene, width, height);
+
+  // Restore the steady state.
+  cmd->Barrier(g_r.ao_lin_depth, nrhi::ResourceState::kPixelShaderResource,
                nrhi::ResourceState::kRenderTarget);
   cmd->FlushBarriers();
   return true;

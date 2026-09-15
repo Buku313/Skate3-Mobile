@@ -270,6 +270,13 @@ include(cmake/CodegenTargets.cmake)
 set(SKATE3_COMMON_SOURCES
     src/exception_compat.cpp
     src/skate3_app_common.cpp
+    src/skate3_android_defaults.cpp
+    src/skate3_audio_fixes.cpp
+    src/skate3_crash_report.cpp
+    src/skate3_guest_trace.cpp
+    src/skate3_heap_check.cpp
+    src/skate3_image_watch.cpp
+    src/skate3_diagnostics.cpp
     src/skate3_demo_path.cpp
     src/skate3_draw_distance.cpp
     src/skate3_fov.cpp

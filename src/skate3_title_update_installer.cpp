@@ -684,6 +684,40 @@ bool DownloadAndStageTitleUpdate(const std::filesystem::path& game_root,
 
 }  // namespace
 
+// SHA-256 of the default.xex this binary's recompiled code was generated from.
+// Update it whenever the codegen input changes; the build prints the value it
+// used. See the header for why a mismatch matters.
+constexpr std::string_view kBaseExecutableSha256 =
+    "1db39496585c521d17a2137804f42cf73ebed2b32cac166ec42dbf772f4dcf7f";
+
+bool VerifyBaseExecutable(const std::filesystem::path& game_root) {
+  const auto xex = game_root / "default.xex";
+  std::vector<uint8_t> data;
+  std::string error;
+  if (!ReadWholeFile(xex, data, error)) {
+    REXLOG_WARN("skate3: could not read {} to check it against this build ({})",
+                xex.string(), error);
+    return false;
+  }
+  const std::string actual = Sha256OfData(data.data(), data.size());
+  if (actual == kBaseExecutableSha256) {
+    REXLOG_INFO("skate3: default.xex matches the build ({} bytes)", data.size());
+    return true;
+  }
+  REXLOG_WARN(
+      "skate3: default.xex does NOT match the one this build was compiled from.\n"
+      "  yours    {} ({} bytes)\n"
+      "  expected {}\n"
+      "  The recompiled code is generated from one specific executable and reads "
+      "its static data - codec tables, strings, constants - out of the copy you "
+      "supply. A different dump leaves the code correct and its addresses "
+      "pointing at the wrong bytes, which shows up later as audio that will not "
+      "start, a frontend that never reaches the world, or calls through null. "
+      "This mismatch may contribute to those symptoms; the log alone does not prove causality.",
+      actual, data.size(), kBaseExecutableSha256);
+  return false;
+}
+
 bool IsTitleUpdateInstalled(const std::filesystem::path& game_root) {
   for (const auto& payload : kPayloads) {
     const auto staged = game_root / std::filesystem::path(std::string(payload.staged_path));

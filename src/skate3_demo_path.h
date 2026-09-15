@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cstdint>
 #include <functional>
+#include <string>
 
 namespace rex::runtime {
 class FunctionDispatcher;
@@ -20,5 +22,18 @@ void SetUiInputProvider(std::function<rex::input::InputSystem*()> provider);
 // host features that poll the merged UI pad state.
 rex::input::InputSystem* GetUiInputSystem();
 bool ShouldForceIntroMovieComplete();
+bool ShouldSkipIntroMovieEarly();
+
+// Macro progress, for the loading overlay: how many pad inputs of the boot
+// sequence have been injected, how many there are in total, and whether the
+// sequence has finished. All zero/false when no macro is running.
+// Replay an arbitrary pad sequence right now, without waiting for the gameplay
+// context (the caller is already in gameplay). Used by the in-game level
+// selector to drive the pause menu the same way the boot macro does.
+bool RunGameplayInputs(const std::string& sequence, int32_t settle_ms);
+
+int32_t GameplayInputsInjected();
+int32_t GameplayInputsTotal();
+bool GameplayInputSequenceComplete();
 
 }  // namespace skate3::demo_path
