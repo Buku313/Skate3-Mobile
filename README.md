@@ -47,6 +47,11 @@ downloads and verifies the new APK inside the app. Android still asks you to
 approve the installation, but you do not need to return to GitHub or reinstall
 your game files.
 
+QA and developer users on older builds: install the matching v2.1 APK once,
+without uninstalling. From v2.1, each package has its own update channel.
+[QA Build](https://github.com/Buku313/Skate3-Mobile/releases/download/v2.1.0-qa1/Skate3-Mobile-QA.apk)
+installs separately from the main app.
+
 The original skater is selected by default. Seiyu Paradise Penguin is included
 in the APK and remains optional. In game, press **RB + Start**, open **Mods**,
 and switch between **Original Skater** and **Seiyu Paradise Penguin** instantly.
@@ -283,6 +288,15 @@ His work is the foundation of this project, including the static recompilation
 pipeline, native renderer, game integration, settings, tools, and a huge amount
 of reverse engineering. The original commits and authorship are preserved in
 this repository.
+
+### Andrew Nakas and AlanConstantino
+
+[Andrew Nakas](https://github.com/andrewnakas) and contributors developed the
+runtime, audio, rendering, and Android lifecycle fixes brought into v2.1.
+[AlanConstantino](https://github.com/AlanConstantino) integrated that work and
+tested it on the Retroid Pocket 6 in [PR #123](https://github.com/Buku313/Skate3-Mobile/pull/123).
+Thank you both. Source provenance and test details are in
+[the integration notes](docs/RP6_INTEGRATION.md).
 
 ### Buku313 / Antonio Seevers
 

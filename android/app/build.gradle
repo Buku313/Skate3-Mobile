@@ -26,8 +26,8 @@ android {
         applicationId "chat.buku.skate3"
         minSdkVersion 33
         targetSdkVersion 35
-        versionCode 20024
-        versionName "2.0.18"
+        versionCode 20100
+        versionName "2.1.0"
     }
     buildTypes {
         debug {
@@ -37,7 +37,15 @@ android {
         qa {
             initWith debug
             applicationIdSuffix ".qa"
-            versionNameSuffix "-qa7"
+            versionNameSuffix "-qa1"
+            signingConfig signingConfigs.debug
+            matchingFallbacks = ["debug"]
+        }
+        review {
+            initWith debug
+            applicationIdSuffix ".pr123"
+            versionNameSuffix "-review"
+            resValue "string", "app_name", "Skate 3 Review"
             signingConfig signingConfigs.debug
             matchingFallbacks = ["debug"]
         }

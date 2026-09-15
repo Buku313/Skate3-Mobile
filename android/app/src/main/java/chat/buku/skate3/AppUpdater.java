@@ -3,6 +3,8 @@ package chat.buku.skate3;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.pm.PackageInfo;
+import android.content.pm.Signature;
 import android.net.Uri;
 import android.provider.Settings;
 
@@ -19,10 +21,10 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Locale;
+import java.util.HashSet;
+import java.util.Set;
 
 final class AppUpdater {
-    static final String MANIFEST_URL =
-        "https://buku313.github.io/Skate3-Mobile/update.json";
     private static final long MAX_APK_SIZE = 350L * 1024 * 1024;
 
     interface Progress {
@@ -49,17 +51,19 @@ final class AppUpdater {
     private AppUpdater() {}
 
     static UpdateInfo check(Context context) throws Exception {
+        String packageName = context.getPackageName();
+        String manifestUrl = UpdatePolicy.manifestUrl(packageName);
+        if (manifestUrl == null) return null;
         JSONObject json = new JSONObject(new String(
-            downloadBytes(MANIFEST_URL, 256 * 1024), StandardCharsets.UTF_8));
+            downloadBytes(manifestUrl, 256 * 1024), StandardCharsets.UTF_8));
         UpdateInfo info = new UpdateInfo(
             json.getLong("versionCode"),
             json.getString("versionName"),
             json.getString("apkUrl"),
             json.getString("sha256").toLowerCase(Locale.US),
             json.optString("notes", "A new build is ready."));
-        if (!info.apkUrl.startsWith("https://") || !info.sha256.matches("[0-9a-f]{64}")) {
-            throw new IOException("The update manifest is invalid.");
-        }
+        UpdatePolicy.validateManifest(packageName, json.getString("packageName"),
+            info.versionCode, info.apkUrl, info.sha256);
         long installed = context.getPackageManager()
             .getPackageInfo(context.getPackageName(), 0).getLongVersionCode();
         return info.versionCode > installed ? info : null;
@@ -115,11 +119,44 @@ final class AppUpdater {
             throw new IOException("Update verification failed. Expected " + info.sha256 +
                                   " but downloaded " + actual + ".");
         }
+        try {
+            verifyPackage(context, pending, info.versionCode);
+        } catch (Exception exception) {
+            pending.delete();
+            throw exception;
+        }
         if (!pending.renameTo(ready)) {
             pending.delete();
             throw new IOException("Could not finalize the verified update package.");
         }
         return ready;
+    }
+
+    private static void verifyPackage(Context context, File apk, long expectedVersion)
+            throws Exception {
+        PackageManager manager = context.getPackageManager();
+        PackageInfo archive = manager.getPackageArchiveInfo(apk.getAbsolutePath(),
+            PackageManager.GET_SIGNING_CERTIFICATES);
+        PackageInfo installed = manager.getPackageInfo(context.getPackageName(),
+            PackageManager.GET_SIGNING_CERTIFICATES);
+        if (archive == null || archive.signingInfo == null || installed.signingInfo == null) {
+            throw new IOException("Could not verify the APK signing certificate.");
+        }
+        UpdatePolicy.validateArchive(context.getPackageName(), archive.packageName,
+            expectedVersion, archive.getLongVersionCode());
+        Set<String> expected = signatures(installed.signingInfo.getApkContentsSigners());
+        Set<String> actual = signatures(archive.signingInfo.getApkContentsSigners());
+        if (expected.isEmpty() || !expected.equals(actual)) {
+            throw new IOException("The update signing key does not match this app.");
+        }
+    }
+
+    private static Set<String> signatures(Signature[] signatures) {
+        Set<String> result = new HashSet<>();
+        if (signatures != null) {
+            for (Signature signature : signatures) result.add(signature.toCharsString());
+        }
+        return result;
     }
 
     static boolean install(Context context, File apk) {

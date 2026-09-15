@@ -4,7 +4,7 @@ import subprocess
 import sys
 
 here = Path(__file__).resolve().parent
-for name in ('startup', 'audio', 'shaders', 'io', 'guest-guards'):
+for name in ('startup', 'audio', 'shaders', 'io', 'guest-guards', 'textures', 'release-paths', 'updates'):
     print(f'Running {name} regression', flush=True)
     subprocess.run([sys.executable, str(here / f'check-{name}.py')], check=True, timeout=120)
-print('PASS: all five RP6 host regression checks')
+print('PASS: all RP6 host regression checks')
