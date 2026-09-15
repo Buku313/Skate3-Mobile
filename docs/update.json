@@ -1,7 +1,8 @@
 {
-  "versionCode": 20017,
-  "versionName": "2.0.17",
-  "apkUrl": "https://github.com/Buku313/Skate3-Mobile/releases/latest/download/Skate3-Mobile-Android.apk",
-  "sha256": "ba68e51746f3358b3bf800b2180e22ca464378a03b47b71170d55521b83ede68",
-  "notes": "Fixes repeated FMV renderer handoffs and first-run movie-skip callbacks, targets confirmed Samsung and AYN callback crashes, and replaces the optional GPU driver chooser with visible buttons for Samsung, Retroid, and AYN themes. System Driver remains the default."
+  "packageName": "chat.buku.skate3",
+  "versionCode": 20100,
+  "versionName": "2.1.0",
+  "apkUrl": "https://github.com/Buku313/Skate3-Mobile/releases/download/v2.1.0/Skate3-Mobile-Android.apk",
+  "sha256": "1a558122d7f88d0ce04a1660b3cbb26bb3efc6a44ebe6b64e8f18bd225d6b772",
+  "notes": "Audio, rendering, and Android startup fixes from Andrew Nakas and contributors, integrated by AlanConstantino. Includes safer failure handling and separate update channels. Seiyu remains included and optional. Experimental build. / Correções de áudio, renderização e inicialização no Android. Seiyu continua incluído e opcional. Versão experimental."
 }

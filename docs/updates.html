@@ -62,11 +62,11 @@
 
   <main>
     <div class="wrap current">
-      <span class="version">CURRENT · <span data-current-version>v2.0.17 DEV</span></span>
-      <h2>FMV and handheld compatibility fixes</h2>
-      <p>Stops the repeated video renderer handoff seen on Retroid, targets confirmed Samsung and AYN callback crashes, and gives optional GPU drivers visible controls across vendor themes.</p>
+      <span class="version">CURRENT · <span data-current-version>v2.1.0 DEV</span></span>
+      <h2>Audio and Android compatibility</h2>
+      <p>Audio, rendering, and startup fixes from <a href="https://github.com/andrewnakas">Andrew Nakas</a> and contributors, integrated and tested on Retroid Pocket 6 by <a href="https://github.com/AlanConstantino">AlanConstantino</a>. Thank you both.</p>
       <div class="actions">
-        <a class="button" data-version-download href="https://github.com/Buku313/Skate3-Mobile/releases/latest/download/Skate3-Mobile-Android.apk">DOWNLOAD v2.0.17 DEV</a>
+        <a class="button" data-version-download href="https://github.com/Buku313/Skate3-Mobile/releases/latest/download/Skate3-Mobile-Android.apk">DOWNLOAD v2.1.0 DEV</a>
         <a class="button secondary" href="https://github.com/Buku313/Skate3-Mobile/issues/new?template=bug_report.yml">REPORT A BUG</a>
       </div>
     </div>
@@ -75,17 +75,20 @@
       <div class="wrap">
         <h2>How app updates work</h2>
         <div class="facts">
-          <div class="fact"><strong>Automatic check</strong><span>The launcher checks this site's signed release manifest when it opens.</span></div>
+          <div class="fact"><strong>Automatic check</strong><span>The launcher checks this site's update manifest for its own app channel.</span></div>
           <div class="fact"><strong>Verified download</strong><span>The APK must match the published SHA-256 checksum and existing signing certificate.</span></div>
           <div class="fact"><strong>Your game stays</strong><span>APK upgrades do not replace extracted Skate 3 files or launcher settings.</span></div>
         </div>
         <p>Android always requires you to approve the final installation. Users on v2.0.7 or older must install v2.0.8 manually once to receive the in-app updater.</p>
+        <p>Using an older QA or developer APK? Install the matching v2.1 APK once, without uninstalling your app. Earlier builds shared the stable update address. From v2.1, stable, QA, and developer apps each stay on their own update channel.</p>
+        <p lang="pt-BR">Usa um APK QA ou de desenvolvedor antigo? Instale o APK v2.1 do mesmo tipo uma vez, sem desinstalar o aplicativo. A partir da v2.1, cada versão recebe suas próprias atualizações.</p>
       </div>
     </section>
 
     <section>
       <div class="wrap">
         <h2>Release history</h2>
+        <article class="release"><time>v2.1.0 · CURRENT DEV BUILD</time><h3>Audio and Android compatibility</h3><p>Includes the PR #123 audio, rendering, and startup work, safer failure handling, and separate app update channels. Original Skater stays the default. Seiyu and the Mod Store are included, and custom drivers remain optional. See the <a href="https://github.com/Buku313/Skate3-Mobile/releases/tag/v2.1.0">release notes</a> for testing details and limitations.</p></article>
         <article class="release"><time>v2.0.17 · CURRENT DEV BUILD</time><h3>FMV and handheld compatibility fixes</h3><ul><li>Latched FMV fallback until the movie decoder actually stops instead of switching renderers every half second.</li><li>Added narrow recoveries for the exact Samsung guest return address 0x82B328D4 and AYN guest return address 0x82F2D074.</li><li>Added checked first-run presentation recoveries for language selection and immediate movie skips.</li><li>Rebuilt the optional GPU driver chooser with visible, focusable buttons for Samsung, Retroid, and AYN vendor themes.</li><li>Kept System Driver recommended and selected by default. Imported Turnip drivers remain optional.</li><li>Verified five initial cold launches plus repeated empty-profile FMV skip tests, gameplay, pause and resume, and physical controls on RG406V.</li></ul></article>
         <article class="release"><time>v2.0.16 · PREVIOUS DEV BUILD</time><h3>Qualcomm compatibility and 4:3 HUD</h3><ul><li>Compacted the native Vulkan layout from seven descriptor sets to the portable four-set floor.</li><li>Targets the pipeline-layout crash reported on Adreno 619 and 650 System Drivers.</li><li>Kept System Driver as the default and added one-tap recovery from an active custom driver.</li><li>Added ZIP and ADPKG import plus readable dark GPU-driver dialogs.</li><li>Added native 4:3 output with safe HUD placement for the combo meter and minimap.</li><li>Recovered the exact AYN cleanup callback reported at guest return address 0x82B3C95C.</li><li>Verified two cold System Driver launches and live native gameplay at 60 FPS on RG406V.</li></ul></article>
         <article class="release"><time>v2.0.15 · PREVIOUS DEV BUILD</time><h3>AYN Thor content crash hotfix</h3><ul><li>Matched the supplied native stack to guest return address 0x82B3CE2C.</li><li>Confirmed the stale 0xFFFDFFFF target came from an optional content-validation callback.</li><li>Returns false only at that exact call site so the retail code follows its normal cleanup path.</li><li>Keeps every unknown indirect call elsewhere fatal and visible in diagnostics.</li><li>Verified a clean System Driver launch to the Skate 3 title screen at 60 FPS on RG406V.</li><li>AYN Thor confirmation is still requested because the device-specific sentinel does not reproduce on the RG406V.</li></ul></article>

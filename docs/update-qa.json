@@ -1,0 +1,8 @@
+{
+  "packageName": "chat.buku.skate3.qa",
+  "versionCode": 20100,
+  "versionName": "2.1.0-qa1",
+  "apkUrl": "https://github.com/Buku313/Skate3-Mobile/releases/download/v2.1.0-qa1/Skate3-Mobile-QA.apk",
+  "sha256": "0aa8605d94dc896cd1d7ae675d0f14a4a8ec6055a3850ec9df387682cae7289a",
+  "notes": "QA Build. Includes the v2.1 audio, rendering, and Android compatibility work. Updates this QA app only. / Versão QA. Inclui as correções de áudio, renderização e compatibilidade da v2.1. Atualiza apenas o aplicativo QA."
+}

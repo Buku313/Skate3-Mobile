@@ -1,0 +1,8 @@
+{
+  "packageName": "chat.buku.skate3.dev",
+  "versionCode": 20100,
+  "versionName": "2.1.0-debug",
+  "apkUrl": "https://github.com/Buku313/Skate3-Mobile/releases/download/v2.1.0/Skate3-Mobile-Android-debug.apk",
+  "sha256": "04d80043aba585c573aab57afd6b030e6f39ed14c4b484ea61d43fce29216181",
+  "notes": "Developer build with the v2.1 audio, rendering, and Android compatibility work. Updates the .dev package only. / Versão de desenvolvedor com as correções da v2.1. Atualiza apenas o aplicativo .dev."
+}

@@ -1,5 +1,9 @@
 # Andrew-to-Buku RP6 compatibility integration
 
+These notes describe the original contribution. Subsequent v2.1 hardening and
+device checks are recorded separately in [the release checks](V2_1_RELEASE_CHECKS.md).
+The AV3 source hashes below identify that historical build, not later releases.
+
 The underlying compatibility fixes were developed by **Andrew Nakas
 (@andrewnakas) and contributors to [Skate 3 Android](https://github.com/andrewnakas/skate3-android)**.
 This contribution adapts them to Buku's app and runtime, corrects integration

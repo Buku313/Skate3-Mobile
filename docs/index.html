@@ -31,7 +31,7 @@
     "name": "Skate 3 Mobile",
     "applicationCategory": "GameApplication",
     "operatingSystem": "Android 13 or newer, ARM64",
-    "softwareVersion": "2.0.17",
+    "softwareVersion": "2.1.0",
     "description": "Experimental native ARM64 Android port using static recompilation and Vulkan. No retail game data is included.",
     "downloadUrl": "https://github.com/Buku313/Skate3-Mobile/releases/latest/download/Skate3-Mobile-Android.apk",
     "codeRepository": "https://github.com/Buku313/Skate3-Mobile",
@@ -325,11 +325,11 @@
   <main id="top">
     <div class="wrap hero">
       <div>
-        <div class="eyebrow">v2.0.17 DEVELOPER BUILD · NATIVE ARM64 ANDROID PORT</div>
+        <div class="eyebrow">v2.1.0 DEVELOPER BUILD · NATIVE ARM64 ANDROID PORT</div>
         <h1>SKATE<span>ANYWHERE.</span></h1>
         <p class="lede">Skate 3 running natively on supported Android phones and handhelds. Download one APK, select an ISO dumped from your own copy, and start skating.</p>
         <div class="actions">
-          <span class="download-action"><a class="button" href="https://github.com/Buku313/Skate3-Mobile/releases/latest/download/Skate3-Mobile-Android.apk">DOWNLOAD APK</a><span class="version-badge" data-current-version>v2.0.17 DEV</span></span>
+          <span class="download-action"><a class="button" href="https://github.com/Buku313/Skate3-Mobile/releases/latest/download/Skate3-Mobile-Android.apk">DOWNLOAD APK</a><span class="version-badge" data-current-version>v2.1.0 DEV</span></span>
           <a class="button secondary" href="#install">HOW TO INSTALL</a>
           <a class="button report" href="https://github.com/Buku313/Skate3-Mobile/issues/new?template=bug_report.yml">BUG REPORT</a>
         </div>
@@ -350,8 +350,8 @@
           <p>Test upcoming fixes before they reach the main release. This version installs separately, may have bugs, and does not include any game files.</p>
         </div>
         <div class="qa-actions">
-          <a class="button" href="https://github.com/Buku313/Skate3-Mobile/releases/download/v2.0.18-qa7/Skate3-Mobile-QA.apk">DOWNLOAD QA APK</a>
-          <a class="button secondary" href="https://github.com/Buku313/Skate3-Mobile/releases/tag/v2.0.18-qa7">VIEW ON GITHUB</a>
+          <a class="button" href="https://github.com/Buku313/Skate3-Mobile/releases/download/v2.1.0-qa1/Skate3-Mobile-QA.apk">DOWNLOAD QA APK</a>
+          <a class="button secondary" href="https://github.com/Buku313/Skate3-Mobile/releases/tag/v2.1.0-qa1">VIEW ON GITHUB</a>
           <span class="qa-note">Installs beside the stable app</span>
         </div>
       </div>
@@ -399,9 +399,9 @@
         </div>
         <div class="cards">
           <article class="card">
-            <span class="update-tag" data-current-version>v2.0.17 DEV</span>
-            <h3>FMV and handheld compatibility fixes</h3>
-            <p>Stops repeated FMV renderer handoffs, targets confirmed Samsung and AYN callback crashes, and makes optional GPU driver controls visible on more vendor themes.</p>
+            <span class="update-tag" data-current-version>v2.1.0 DEV</span>
+            <h3>Audio and Android compatibility</h3>
+            <p>New audio, rendering, and startup fixes from Andrew Nakas and contributors, integrated by AlanConstantino. Thank you for helping get more people skating.</p>
           </article>
           <article class="card">
             <span class="update-tag testing">IN TESTING</span>
@@ -431,10 +431,22 @@
       </div>
     </section>
 
+    <section id="credits">
+      <div class="wrap">
+        <h2>Made possible by.</h2>
+        <div class="cards">
+          <article class="card"><h3><a href="https://github.com/mchughalex">Alex McHugh</a></h3><p>The upstream Skate3Recomp project, native renderer, and reverse engineering this port is built on.</p></article>
+          <article class="card"><h3><a href="https://github.com/andrewnakas">Andrew Nakas</a></h3><p>Audio, rendering, runtime, and Android lifecycle fixes, developed with contributors.</p></article>
+          <article class="card"><h3><a href="https://github.com/AlanConstantino">AlanConstantino</a></h3><p>Integration of those fixes and Retroid Pocket 6 testing. Thank you for PR #123.</p></article>
+          <article class="card"><h3><a href="https://github.com/Buku313">Buku313</a></h3><p>The Android port and Seiyu. Built with ReXGlue, Xenia, SDL, FFmpeg, and the community.</p></article>
+        </div>
+      </div>
+    </section>
+
     <section>
       <div class="wrap download-panel">
         <div><h2>Ready to test?</h2><p>Grab the latest signed developer build. Expect bugs, report what you find, and check the Updates page before installing.</p></div>
-        <span class="download-action"><a class="button" href="https://github.com/Buku313/Skate3-Mobile/releases/latest/download/Skate3-Mobile-Android.apk">GET SKATE 3 MOBILE</a><span class="version-badge" data-current-version>v2.0.17 DEV</span></span>
+        <span class="download-action"><a class="button" href="https://github.com/Buku313/Skate3-Mobile/releases/latest/download/Skate3-Mobile-Android.apk">GET SKATE 3 MOBILE</a><span class="version-badge" data-current-version>v2.1.0 DEV</span></span>
       </div>
     </section>
   </main>
@@ -445,13 +457,20 @@
   <script>
     const englishText = new WeakMap();
     const ptBR = {
+      "Audio and Android compatibility": "Áudio e compatibilidade com Android",
+      "New audio, rendering, and startup fixes from Andrew Nakas and contributors, integrated by AlanConstantino. Thank you for helping get more people skating.": "Novas correções de áudio, renderização e inicialização de Andrew Nakas e colaboradores, integradas por AlanConstantino. Obrigado por ajudar mais pessoas a jogar.",
+      "Made possible by.": "Quem tornou isso possível.",
+      "The upstream Skate3Recomp project, native renderer, and reverse engineering this port is built on.": "O projeto original Skate3Recomp, o renderizador nativo e a engenharia reversa que servem de base para este port.",
+      "Audio, rendering, runtime, and Android lifecycle fixes, developed with contributors.": "Correções de áudio, renderização, runtime e ciclo de vida no Android, desenvolvidas com colaboradores.",
+      "Integration of those fixes and Retroid Pocket 6 testing. Thank you for PR #123.": "Integração dessas correções e testes no Retroid Pocket 6. Obrigado pelo PR #123.",
+      "The Android port and Seiyu. Built with ReXGlue, Xenia, SDL, FFmpeg, and the community.": "O port para Android e o Seiyu. Feito com ReXGlue, Xenia, SDL, FFmpeg e a comunidade.",
       "Mods": "Mods",
       "Releases": "Versões",
       "Updates": "Atualizações",
       "Report a bug": "Relatar um bug",
       "Source on GitHub": "Código no GitHub",
       "DEVELOPER BUILD · EXPERIMENTAL SOFTWARE · EXPECT BUGS AND DEVICE-SPECIFIC PROBLEMS": "VERSÃO DE DESENVOLVIMENTO · SOFTWARE EXPERIMENTAL · ESPERE BUGS E PROBLEMAS ESPECÍFICOS DO DISPOSITIVO",
-      "v2.0.17 DEVELOPER BUILD · NATIVE ARM64 ANDROID PORT": "v2.0.17 VERSÃO DE DESENVOLVIMENTO · PORT NATIVO ARM64 PARA ANDROID",
+      "v2.1.0 DEVELOPER BUILD · NATIVE ARM64 ANDROID PORT": "v2.1.0 VERSÃO DE DESENVOLVIMENTO · PORT NATIVO ARM64 PARA ANDROID",
       "ANYWHERE.": "EM QUALQUER LUGAR.",
       "Skate 3 running natively on supported Android phones and handhelds. Download one APK, select an ISO dumped from your own copy, and start skating.": "Skate 3 rodando nativamente em celulares e consoles portáteis Android compatíveis. Baixe um APK, selecione uma ISO extraída da sua própria cópia e comece a andar de skate.",
       "DOWNLOAD APK": "BAIXAR APK",
