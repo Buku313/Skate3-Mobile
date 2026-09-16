@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Submit a Character | Skate 3 Mobile</title>
+  <title>Submit a Mod | Skate 3 Mobile</title>
   <meta name="description" content="Submit an original custom character for review in the Skate 3 Mobile Mod Store.">
   <meta name="theme-color" content="#ff6518">
   <link rel="canonical" href="https://buku313.github.io/Skate3-Mobile/mods/submit.html">
@@ -16,7 +16,8 @@
     nav { min-height:72px; display:flex; gap:18px; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,.08); }
     .brand { font-weight:950; letter-spacing:-.04em; font-size:1.15rem; text-decoration:none; }
     .brand span,.kicker { color:var(--orange); }
-    .nav-links { display:flex; gap:18px; }
+    .nav-links { display:flex; gap:18px; flex-wrap:wrap; align-items:center; }
+    #language-toggle { font:inherit; cursor:pointer; border:1px solid var(--line); border-radius:8px; padding:10px 12px; background:var(--panel); color:white; }
     .nav-links a { color:var(--muted); font-weight:750; text-decoration:none; }
     header { padding:72px 0 46px; }
     .kicker { font-size:.8rem; font-weight:900; letter-spacing:.15em; }
@@ -36,25 +37,26 @@
     code { color:#ffd0b8; }
     .warning { margin-top:20px; padding:18px 20px; border-left:5px solid var(--orange); border-radius:12px; background:rgba(255,101,24,.09); color:#ffd7c3; }
     footer { padding:42px 0 56px; border-top:1px solid rgba(255,255,255,.08); color:#7d7e87; font-size:.86rem; }
-    @media(max-width:720px){ .grid{grid-template-columns:1fr}.nav-links{gap:11px;font-size:.84rem}.button{width:100%} }
+    @media(max-width:720px){ nav{flex-wrap:wrap;padding:16px 0;gap:14px}.grid{grid-template-columns:1fr}.nav-links{gap:11px;font-size:.84rem}.button{width:100%} }
   </style>
 </head>
 <body>
   <div class="wrap">
     <nav>
       <a class="brand" href="../index.html">SKATE 3 <span>MOBILE</span></a>
-      <div class="nav-links"><a href="index.html">Mod Store</a><a href="../releases.html">Releases</a><a href="../updates.html">Updates</a></div>
+      <div class="nav-links"><a href="index.html">Mod Store</a><a href="../releases.html">Releases</a><a href="../updates.html">Updates</a><button type="button" id="language-toggle" aria-label="Mudar para português do Brasil">🇧🇷 Português</button></div>
     </nav>
   </div>
 
   <header class="wrap">
     <div class="kicker">COMMUNITY CHARACTER PROGRAM</div>
-    <h1>SUBMIT A SKATER.</h1>
+    <h1>SUBMIT A MOD.</h1>
     <p class="lede">Made a character that belongs on a board? Send the model, texture, preview, and creator credit. Approved characters can be packaged into the verified Skate 3 Mobile Mod Store.</p>
     <div class="actions">
-      <a class="button" href="https://github.com/Buku313/Skate3-Mobile/issues/new?template=character_mod_submission.yml">START A SUBMISSION</a>
+      <a class="button" id="submission-form" href="https://github.com/Buku313/Skate3-Mobile/issues/new?template=character_mod_submission.yml">OPEN GITHUB FORM</a>
       <a class="button secondary" href="https://github.com/Buku313/Skate3-Mobile/releases/download/v2.0.12/Seiyu-Paradise-Penguin-v1.0.0.zip">DOWNLOAD SEIYU EXAMPLE</a>
     </div>
+    <p>We currently review character mods. A GitHub account is required, and submissions are public. Nothing is uploaded automatically. Choose your ZIP and preview on GitHub, review the form, then submit it yourself.</p>
   </header>
 
   <main>
@@ -99,6 +101,65 @@
     </section>
   </main>
 
-  <footer class="wrap">Submissions are reviewed individually and publication is not guaranteed. Return to the <a href="index.html">Skate 3 Mobile Mod Store</a>.</footer>
+  <footer class="wrap"><span>Submissions are reviewed individually and publication is not guaranteed. Return to the</span> <a href="index.html">Skate 3 Mobile Mod Store</a>.</footer>
+  <script>
+    const translations = {
+      "Mod Store": "Loja de Mods", "Releases": "Versões", "Updates": "Atualizações",
+      "COMMUNITY CHARACTER PROGRAM": "PERSONAGENS DA COMUNIDADE",
+      "SUBMIT A MOD.": "ENVIE UM MOD.",
+      "Made a character that belongs on a board? Send the model, texture, preview, and creator credit. Approved characters can be packaged into the verified Skate 3 Mobile Mod Store.": "Criou um personagem que merece andar de skate? Envie o modelo, a textura, uma prévia e os créditos do criador. Personagens aprovados podem entrar na Loja de Mods verificados do Skate 3 Mobile.",
+      "OPEN GITHUB FORM": "ABRIR FORMULÁRIO NO GITHUB",
+      "DOWNLOAD SEIYU EXAMPLE": "BAIXAR EXEMPLO DO SEIYU",
+      "We currently review character mods. A GitHub account is required, and submissions are public. Nothing is uploaded automatically. Choose your ZIP and preview on GitHub, review the form, then submit it yourself.": "No momento, analisamos mods de personagens. É necessária uma conta no GitHub, e os envios são públicos. Nada é enviado automaticamente. Escolha o ZIP e a prévia no GitHub, revise o formulário e confirme o envio.",
+      "What to send": "O que enviar", "Character ZIP": "ZIP do personagem",
+      "plus": "e", ", with no retail game files.": ", sem arquivos do jogo comercial.",
+      "Preview image": "Imagem de prévia",
+      "A clear PNG or JPG showing the character from the front and side, preferably standing on a board.": "Um PNG ou JPG nítido mostrando o personagem de frente e de lado, de preferência em cima de um skate.",
+      "Credit and permission": "Créditos e permissão",
+      "Your creator name, profile link, and confirmation that the files may be redistributed in the public store.": "Seu nome de criador, link do perfil e confirmação de que os arquivos podem ser redistribuídos na loja pública.",
+      "Technical package": "Preparação do modelo",
+      "Name the model": "Nomeie o modelo como", "and the diffuse texture": "e a textura difusa como",
+      "Triangulate the OBJ and include UV coordinates and normals.": "Triangule o OBJ e inclua coordenadas UV e normais.",
+      "Keep the expanded model below 65,535 vertices for the native renderer.": "Mantenha o modelo expandido abaixo de 65.535 vértices para o renderizador nativo.",
+      "Use Seiyu's package as the orientation, scale, and folder-layout reference.": "Use o pacote do Seiyu como referência de orientação, escala e estrutura de pastas.",
+      "Keep feet clearly separated and placed at the bottom of the model so automatic rig transfer can find the board contact points.": "Mantenha os pés bem separados na parte inferior do modelo para que a transferência automática do esqueleto encontre os pontos de contato com o skate.",
+      "Test tricks, pushing, bails, emotes, the board, and both camera directions before submission.": "Teste manobras, remadas, quedas, gestos, o skate e as duas direções de câmera antes de enviar.",
+      "The runtime transfers the live skater skeleton automatically. Characters with unusual bodies may need project-specific scale, foot, flipper, or hand tuning before publication.": "O runtime transfere automaticamente o esqueleto do skatista em jogo. Personagens com corpos diferentes podem precisar de ajustes de escala, pés, nadadeiras ou mãos antes da publicação.",
+      "Review process": "Como funciona a análise", "1. Submit": "1. Envie",
+      "Open the GitHub form, complete every field, then attach your ZIP and preview.": "Abra o formulário no GitHub, preencha os campos e anexe o ZIP e a prévia.",
+      "2. Test and tune": "2. Testes e ajustes",
+      "The character is checked for safe files, permissions, rendering, animation, board contact, and handheld performance.": "O personagem é avaliado quanto aos arquivos, permissões, renderização, animação, contato com o skate e desempenho em portáteis.",
+      "3. Publish and credit": "3. Publicação e créditos",
+      "Approved files receive exact size and SHA-256 records, creator credit, and a verified Mod Store listing.": "Os arquivos aprovados recebem registros de tamanho e SHA-256, créditos do criador e uma entrada verificada na Loja de Mods.",
+      "Only submit work you created or have explicit permission to redistribute. Never upload a Skate 3 ISO, XEX, Title Update, DLC, extracted retail model, or other copyrighted game data.": "Envie apenas trabalhos que você criou ou tem permissão explícita para redistribuir. Nunca envie ISO de Skate 3, XEX, Title Update, DLC, modelo extraído do jogo comercial ou outros arquivos protegidos do jogo.",
+      "Submissions are reviewed individually and publication is not guaranteed. Return to the": "Cada envio é analisado individualmente e a publicação não é garantida. Voltar à",
+      "Skate 3 Mobile Mod Store": "Loja de Mods do Skate 3 Mobile"
+    };
+    const originals = new WeakMap();
+    function applyLanguage(language) {
+      const portuguese = language === "pt-BR";
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        if (!node.parentElement || node.parentElement.closest("script, style, #language-toggle")) continue;
+        if (!originals.has(node)) originals.set(node, node.nodeValue);
+        const original = originals.get(node), key = original.trim();
+        node.nodeValue = portuguese && translations[key] ? original.replace(key, translations[key]) : original;
+      }
+      document.documentElement.lang = portuguese ? "pt-BR" : "en";
+      document.title = portuguese ? "Enviar um Mod | Skate 3 Mobile" : "Submit a Mod | Skate 3 Mobile";
+      const toggle = document.getElementById("language-toggle");
+      toggle.textContent = portuguese ? "🇺🇸 English" : "🇧🇷 Português";
+      toggle.setAttribute("aria-label", portuguese ? "Switch to English" : "Mudar para português do Brasil");
+      document.getElementById("submission-form").href = "https://github.com/Buku313/Skate3-Mobile/issues/new?template=" +
+        (portuguese ? "character_mod_submission_pt_br.yml" : "character_mod_submission.yml");
+      try { localStorage.setItem("skate3-language", portuguese ? "pt-BR" : "en"); } catch (_) {}
+    }
+    let saved = "en";
+    try { saved = localStorage.getItem("skate3-language") || "en"; } catch (_) {}
+    applyLanguage(new URLSearchParams(location.search).get("lang") || saved);
+    document.getElementById("language-toggle").addEventListener("click", () =>
+      applyLanguage(document.documentElement.lang === "pt-BR" ? "en" : "pt-BR"));
+  </script>
 </body>
 </html>

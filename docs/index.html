@@ -123,7 +123,7 @@
     h1 span { display: block; color: var(--orange); }
     .lede { max-width: 620px; color: #d7d7dd; font-size: clamp(1.05rem, 2vw, 1.28rem); }
     .actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 30px 0 14px; }
-    .download-action { display: inline-flex; align-items: center; gap: 10px; }
+    .download-action { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 10px; max-width: 100%; }
     .version-badge {
       display: inline-flex;
       align-items: center;
@@ -367,9 +367,10 @@
         </div>
         <div class="performance-copy">
           <div class="eyebrow">REAL DEVICE CAPTURE</div>
-          <h2>Beautiful on Galaxy S25+.</h2>
-          <span class="performance-number">90 FPS</span>
-          <p>This complete uncut recording is from a Samsung Galaxy S25+. The AYN Thor has separately been confirmed running the game around 90 FPS.</p>
+          <h2>Phones. Handhelds. Skate.</h2>
+          <span class="performance-number">ANDROID</span>
+          <p>Built for capable mid-range and high-end Android phones and handhelds. Buku's RG406V is now running beautifully in Quality mode, with richer graphics.</p>
+          <p class="fine">Video recorded on a Samsung Galaxy S25+. Device support depends on the GPU and driver; not every model has been tested.</p>
           <p class="fine">Experimental developer build. Frame rate changes with scene, settings, temperature, and device power mode.</p>
         </div>
       </div>
@@ -420,7 +421,7 @@
     <section>
       <div class="wrap">
         <h2>Built for players.</h2>
-        <p class="section-intro">Performance mode targets handheld hardware such as the RG406V. The AYN Thor has now demonstrated around 90 FPS, and Quality mode is included for stronger devices.</p>
+        <p class="section-intro">Quality graphics on an RG406V, not just flagship phones. Pick Quality for richer graphics, or Performance for more headroom. Android 13+, ARM64, and Vulkan are required; results vary by device and settings.</p>
         <div class="cards">
           <article class="card"><h3>Native Vulkan rendering</h3><p>Static ARM64 recompilation with a native scene renderer. This is not conventional Xbox 360 emulation.</p></article>
           <article class="card"><h3>Touch or controller</h3><p>Use the built-in multitouch overlay on a phone, or keep using a physical or built-in gamepad. Toggle touch controls from the top of the game.</p></article>
@@ -486,8 +487,9 @@
       "VIEW ON GITHUB": "VER NO GITHUB",
       "Installs beside the stable app": "Instala junto com o aplicativo estável",
       "REAL DEVICE CAPTURE": "GRAVAÇÃO EM DISPOSITIVO REAL",
-      "Beautiful on Galaxy S25+.": "Incrível no Galaxy S25+.",
-      "This complete uncut recording is from a Samsung Galaxy S25+. The AYN Thor has separately been confirmed running the game around 90 FPS.": "Esta gravação completa e sem cortes foi feita em um Samsung Galaxy S25+. O AYN Thor também foi confirmado rodando o jogo por volta de 90 FPS.",
+      "Phones. Handhelds. Skate.": "Celulares. Portáteis. Skate.",
+      "Built for capable mid-range and high-end Android phones and handhelds. Buku's RG406V is now running beautifully in Quality mode, with richer graphics.": "Feito para celulares e portáteis Android intermediários potentes e de alto desempenho. O RG406V do Buku já está rodando muito bem no modo Qualidade, com gráficos mais detalhados.",
+      "Video recorded on a Samsung Galaxy S25+. Device support depends on the GPU and driver; not every model has been tested.": "Vídeo gravado em um Samsung Galaxy S25+. A compatibilidade depende da GPU e do driver. Nem todos os modelos foram testados.",
       "Experimental developer build. Frame rate changes with scene, settings, temperature, and device power mode.": "Versão experimental de desenvolvimento. A taxa de quadros varia conforme a cena, as configurações, a temperatura e o modo de energia do dispositivo.",
       "Three steps. No computer.": "Três passos. Sem computador.",
       "The app handles extraction and the verified Title Update locally. Your ISO stays on your device and is never uploaded.": "O aplicativo faz a extração e instala a atualização verificada localmente. Sua ISO permanece no dispositivo e nunca é enviada para a internet.",
@@ -511,7 +513,7 @@
       "Touch controls and app updates": "Controles de toque e atualizações do aplicativo",
       "Play with the multitouch Xbox-style overlay, then download verified signed APK updates without replacing your extracted game files.": "Jogue com o controle multitoque no estilo Xbox e baixe atualizações APK assinadas e verificadas sem substituir os arquivos extraídos do jogo.",
       "Built for players.": "Feito para jogadores.",
-      "Performance mode targets handheld hardware such as the RG406V. The AYN Thor has now demonstrated around 90 FPS, and Quality mode is included for stronger devices.": "O modo Desempenho foi criado para portáteis como o RG406V. O AYN Thor já demonstrou cerca de 90 FPS, e o modo Qualidade está disponível para dispositivos mais potentes.",
+      "Quality graphics on an RG406V, not just flagship phones. Pick Quality for richer graphics, or Performance for more headroom. Android 13+, ARM64, and Vulkan are required; results vary by device and settings.": "Gráficos de qualidade no RG406V, não apenas em celulares topo de linha. Escolha Qualidade para gráficos mais detalhados ou Desempenho para mais folga. Requer Android 13+, ARM64 e Vulkan. Os resultados variam conforme o dispositivo e as configurações.",
       "Native Vulkan rendering": "Renderização Vulkan nativa",
       "Static ARM64 recompilation with a native scene renderer. This is not conventional Xbox 360 emulation.": "Recompilação estática ARM64 com renderizador de cena nativo. Isto não é emulação convencional de Xbox 360.",
       "Touch or controller": "Toque ou controle físico",
