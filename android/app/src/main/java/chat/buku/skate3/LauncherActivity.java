@@ -72,6 +72,7 @@ public class LauncherActivity extends Activity {
     private Button languageButton;
     private Button primaryButton;
     private Button characterButton;
+    private Button submitModButton;
     private Button gpuDriverButton;
     private Button secondaryButton;
     private Button tertiaryButton;
@@ -188,6 +189,7 @@ public class LauncherActivity extends Activity {
 
         primaryButton = actionButton(true);
         characterButton = actionButton(false);
+        submitModButton = actionButton(false);
         gpuDriverButton = actionButton(false);
         secondaryButton = actionButton(false);
         tertiaryButton = actionButton(false);
@@ -195,6 +197,8 @@ public class LauncherActivity extends Activity {
         reportButton = actionButton(false);
         content.addView(primaryButton, matchFixed(dp(58), dp(10)));
         content.addView(characterButton, matchFixed(dp(54), dp(10)));
+        content.addView(submitModButton, matchFixed(dp(54), dp(10)));
+        setButton(submitModButton, "SUBMIT A MOD", view -> openModSubmission(), false);
         content.addView(secondaryButton, matchFixed(dp(54), dp(10)));
         content.addView(tertiaryButton, matchFixed(dp(54), dp(10)));
         content.addView(updateButton, matchFixed(dp(50), dp(18)));
@@ -928,6 +932,12 @@ public class LauncherActivity extends Activity {
         });
     }
 
+    private void openModSubmission() {
+        if (busy) return;
+        dismissModStoreList();
+        startActivity(new Intent(this, ModSubmissionActivity.class));
+    }
+
     private void showModStoreList(List<ModStore.Mod> mods, boolean[] installed) {
         ScrollView scroll = new ScrollView(this);
         scroll.setBackgroundColor(Color.rgb(15, 15, 18));
@@ -942,6 +952,10 @@ public class LauncherActivity extends Activity {
             14, Color.rgb(190, 190, 198));
         intro.setLineSpacing(0, 1.12f);
         list.addView(intro, matchWrap(dp(16)));
+
+        Button submit = actionButton(false);
+        setButton(submit, "SUBMIT A MOD", view -> openModSubmission(), false);
+        list.addView(submit, matchFixed(dp(52), dp(16)));
 
         for (int index = 0; index < mods.size(); ++index) {
             ModStore.Mod mod = mods.get(index);
@@ -1389,6 +1403,7 @@ public class LauncherActivity extends Activity {
         languageButton.setEnabled(enabled);
         primaryButton.setEnabled(enabled);
         characterButton.setEnabled(enabled);
+        submitModButton.setEnabled(enabled);
         gpuDriverButton.setEnabled(enabled);
         secondaryButton.setEnabled(enabled);
         tertiaryButton.setEnabled(enabled);

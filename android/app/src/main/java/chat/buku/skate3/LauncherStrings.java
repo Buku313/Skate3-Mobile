@@ -16,6 +16,25 @@ final class LauncherStrings {
     private static final Map<String, String> PT = new HashMap<>();
 
     static {
+        put("COMMUNITY MODS", "MODS DA COMUNIDADE");
+        put("SUBMIT A MOD", "ENVIAR UM MOD");
+        put("Made a character? Send it in for the Mod Store. Character mods are currently supported; every submission is reviewed before publication.",
+            "Criou um personagem? Envie para a Loja de Mods. No momento, aceitamos mods de personagens. Todos os envios passam por análise antes da publicação.");
+        put("What to prepare", "O que preparar");
+        put("1. A ZIP containing base.obj and texture_diffuse.png.\n2. A PNG or JPG preview.\n3. Your creator name, credit link, and redistribution permission.\n4. The app version, tested devices, and any known animation or board-contact problems.",
+            "1. Um ZIP com base.obj e texture_diffuse.png.\n2. Uma prévia em PNG ou JPG.\n3. Seu nome de criador, link para os créditos e permissão de redistribuição.\n4. A versão do aplicativo, os dispositivos testados e problemas conhecidos de animação ou contato com o skate.");
+        put("Only send work you created or have permission to share. Never attach an ISO, XEX, Title Update, save, or extracted retail game files.",
+            "Envie apenas trabalhos que você criou ou tem permissão para compartilhar. Nunca anexe ISO, XEX, Title Update, save ou arquivos extraídos do jogo comercial.");
+        put("The form opens on GitHub and requires an account. Submissions are public. You choose the attachments and press Submit on GitHub; this app does not upload files or publish a mod automatically.",
+            "O formulário abre no GitHub e exige uma conta. Os envios são públicos. Você escolhe os anexos e confirma o envio no GitHub. Este aplicativo não envia arquivos nem publica mods automaticamente.");
+        put("OPEN SUBMISSION FORM", "ABRIR FORMULÁRIO DE ENVIO");
+        put("MODEL GUIDE AND SEIYU EXAMPLE", "GUIA DO MODELO E EXEMPLO DO SEIYU");
+        put("BACK TO LAUNCHER", "VOLTAR AO LAUNCHER");
+        put("No browser available", "Nenhum navegador disponível");
+        put("Install a browser or copy this link to open it elsewhere.",
+            "Instale um navegador ou copie este link para abri-lo em outro lugar.");
+        put("Copy link", "Copiar link");
+        put("Link copied.", "Link copiado.");
         put("PHONE-ONLY INSTALLER", "INSTALADOR SEM COMPUTADOR");
         put("No computer required. Select an Xbox 360 ISO that you dumped from your own Skate 3 copy. The game stays on this device.",
             "Nenhum computador é necessário. Selecione uma ISO de Xbox 360 extraída da sua própria cópia de Skate 3. O jogo permanece neste dispositivo.");

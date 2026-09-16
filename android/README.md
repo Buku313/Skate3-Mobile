@@ -61,6 +61,23 @@ Older development installs in `/sdcard/skate3` are still recognized when the
 app already has All files access. New users do not need to create that folder or
 grant that permission.
 
+## Submit a character mod
+
+The launcher has a **Submit a mod** page, also reachable from the Mod Store.
+It is available before game setup and explains the ZIP, preview, credit,
+permission, and testing information needed for a character submission.
+
+The page follows the launcher's English or Brazilian Portuguese setting.
+**Open submission form** opens GitHub in a browser. A GitHub account is required;
+submissions are public, and the creator chooses the attachments and confirms
+the submission there. The launcher does not upload files or publish mods.
+The instructions remain readable offline. If no browser is available, the
+creator can copy the public link instead.
+
+This launcher entry is an unreleased change after v2.1.0. The
+[website submission guide](https://buku313.github.io/Skate3-Mobile/mods/submit.html)
+is also accessible from any browser.
+
 ## Build prerequisites
 
 - A macOS ARM build host

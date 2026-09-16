@@ -1,0 +1,75 @@
+name: Enviar personagem (Português)
+description: Envie um personagem original para análise na Loja de Mods do Skate 3 Mobile
+title: "[ENVIO DE PERSONAGEM] "
+labels:
+  - mod submission
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por criar um personagem para o Skate 3 Mobile. Este envio é público. Anexe apenas trabalhos que você criou ou tem permissão para redistribuir. Não envie arquivos comerciais do jogo, executáveis, ISOs, saves ou Title Updates.
+
+        [Guia do modelo e exemplo do Seiyu](https://buku313.github.io/Skate3-Mobile/mods/submit.html?lang=pt-BR)
+  - type: input
+    id: character_name
+    attributes:
+      label: Nome do personagem
+      placeholder: Seiyu Paradise Penguin
+    validations:
+      required: true
+  - type: input
+    id: creator
+    attributes:
+      label: Créditos do criador
+      description: O nome e o link que devem aparecer na Loja de Mods.
+      placeholder: Nome do criador e https://github.com/usuario
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Descrição do personagem
+      description: Escreva a descrição curta que os jogadores devem ver na loja.
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: ZIP do personagem e prévia
+      description: Anexe aqui o ZIP e uma prévia em PNG ou JPG. O ZIP deve conter apenas base.obj e texture_diffuse.png.
+    validations:
+      required: true
+  - type: textarea
+    id: permission
+    attributes:
+      label: Autoria e permissão
+      description: Informe quem criou o modelo e a textura e qual permissão ou licença permite a redistribuição pelo projeto.
+    validations:
+      required: true
+  - type: input
+    id: tested_version
+    attributes:
+      label: Versão testada do Skate 3 Mobile
+      placeholder: v2.1.0
+    validations:
+      required: true
+  - type: textarea
+    id: testing
+    attributes:
+      label: Notas dos testes
+      description: Liste os dispositivos testados e descreva os pés, contato com o skate, nadadeiras ou mãos, gestos, manobras e problemas visíveis.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Permissão de envio
+      options:
+        - label: Criei estes arquivos ou tenho permissão explícita para redistribuí-los.
+          required: true
+        - label: Este envio não contém arquivos comerciais de Skate 3, executáveis, dados de ISO, saves ou Title Updates.
+          required: true
+        - label: Autorizo Buku313/Skate3-Mobile a testar, preparar, redistribuir e dar créditos a este personagem pela Loja de Mods pública.
+          required: true
+        - label: Entendo que análise, alterações técnicas ou rejeição podem ser necessárias antes da publicação.
+          required: true
