@@ -1,5 +1,6 @@
 package chat.buku.skate3;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.InputDevice;
@@ -45,9 +46,22 @@ public class Skate3Activity extends SDLActivity {
             nativeSetenv("SKATE3_VULKAN_DRIVER_NAME", "");
             Log.i("Skate3GpuDriver", "Selected system driver");
         }
-        touchController = new TouchControllerView(this);
-        mLayout.addView(touchController, new ViewGroup.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        if (TouchControllerView.isEnabled(this)) {
+            touchController = new TouchControllerView(this);
+            mLayout.addView(touchController, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        }
+    }
+
+    public void restartProcess() {
+        try {
+            Intent intent = new Intent(this, Skate3Activity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+        } catch (Exception error) {
+            Log.e("Skate3Restart", "restartProcess failed", error);
+        }
+        android.os.Process.killProcess(android.os.Process.myPid());
     }
 
     @Override

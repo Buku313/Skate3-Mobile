@@ -52,6 +52,12 @@ final class LauncherStrings {
         put("CLOSE", "FECHAR");
         put("READY TO SKATE", "PRONTO PARA ANDAR DE SKATE");
         put("PLAY SKATE 3", "JOGAR SKATE 3");
+        put("TOUCH CONTROLS: ON", "CONTROLES DE TOQUE: LIGADOS");
+        put("TOUCH CONTROLS: OFF", "CONTROLES DE TOQUE: DESLIGADOS");
+        put("Touch controls on. The on-screen pad appears when you play.",
+            "Controles de toque ligados. O painel na tela aparece quando você joga.");
+        put("Touch controls off. The screen stays clear for a physical controller.",
+            "Controles de toque desligados. A tela fica livre para um controle físico.");
         put("REPAIR OR REINSTALL", "REPARAR OU REINSTALAR");
         put("VIEW SETUP LOG", "VER REGISTRO DA INSTALAÇÃO");
         put("VIEW LAST SETUP LOG", "VER ÚLTIMO REGISTRO");

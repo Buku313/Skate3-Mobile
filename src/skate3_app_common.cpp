@@ -49,6 +49,11 @@
 #endif
 #endif
 
+#if defined(__ANDROID__)
+#include <jni.h>
+#include <rex/main_android.h>
+#endif
+
 #include <rex/cvar.h>
 #include <rex/filesystem.h>
 #include <rex/filesystem/devices/stfs_container_device.h>
@@ -1117,7 +1122,22 @@ void Skate3BaseApp::ApplyGameplayCursorMode() {
 
 void Skate3BaseApp::RestartGame() {
   app_context().CallInUIThreadDeferred([this]() {
-#if defined(_WIN32)
+#if defined(__ANDROID__)
+    if (JNIEnv* env = rex::GetAndroidThreadJniEnv()) {
+      if (jobject activity = rex::GetAndroidApplicationContext()) {
+        if (jclass cls = env->GetObjectClass(activity)) {
+          if (jmethodID mid = env->GetMethodID(cls, "restartProcess", "()V")) {
+            env->CallVoidMethod(activity, mid);
+          }
+          if (env->ExceptionCheck()) {
+            env->ExceptionClear();
+          }
+          env->DeleteLocalRef(cls);
+        }
+      }
+    }
+    return;
+#elif defined(_WIN32)
     wchar_t executable_path[MAX_PATH] = {};
     if (!GetModuleFileNameW(nullptr, executable_path, MAX_PATH)) {
       REXLOG_WARN("Restart requested, but the executable path could not be resolved");
