@@ -34,6 +34,7 @@ public final class TouchControllerView extends View {
     private static final int Y = 0x8000;
     private static final String PREFS = "skate3_touch_controller";
     private static final String PREF_VISIBLE = "visible";
+    private static final String PREF_ENABLED = "enabled";
 
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -65,6 +66,18 @@ public final class TouchControllerView extends View {
         controlsVisible = preferences.contains(PREF_VISIBLE)
             ? preferences.getBoolean(PREF_VISIBLE, true)
             : !hasPhysicalController();
+    }
+
+    public static boolean isEnabled(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        return prefs.contains(PREF_ENABLED)
+            ? prefs.getBoolean(PREF_ENABLED, true)
+            : !hasPhysicalController();
+    }
+
+    public static void setEnabled(Context context, boolean enabled) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putBoolean(PREF_ENABLED, enabled).apply();
     }
 
     public void clearInput() {
@@ -140,10 +153,11 @@ public final class TouchControllerView extends View {
         controls.add(new ButtonControl("R3", width * .73f, height * .48f,
                                        buttonRadius * .82f, R3));
 
-        float toggleWidth = controlsVisible ? unit * 1.05f : unit * 1.35f;
+        float toggleWidth = controlsVisible ? unit * 1.05f : unit * .62f;
+        float toggleHeight = controlsVisible ? unit * .46f : unit * .34f;
         float toggleTop = Math.max(dp(18), height * .035f);
         toggle.set(width * .5f - toggleWidth * .5f, toggleTop,
-                   width * .5f + toggleWidth * .5f, toggleTop + unit * .46f);
+                   width * .5f + toggleWidth * .5f, toggleTop + toggleHeight);
         sendState();
         invalidate();
     }
@@ -157,12 +171,14 @@ public final class TouchControllerView extends View {
     }
 
     private void drawToggle(Canvas canvas) {
-        fill.setColor(Color.argb(175, 15, 15, 18));
-        stroke.setColor(Color.argb(220, 255, 112, 28));
+        int fillAlpha = controlsVisible ? 175 : 95;
+        int strokeAlpha = controlsVisible ? 220 : 120;
+        fill.setColor(Color.argb(fillAlpha, 15, 15, 18));
+        stroke.setColor(Color.argb(strokeAlpha, 255, 112, 28));
         canvas.drawRoundRect(toggle, dp(9), dp(9), fill);
         canvas.drawRoundRect(toggle, dp(9), dp(9), stroke);
         drawLabel(canvas, controlsVisible ? "HIDE" : "TOUCH", toggle.centerX(),
-                  toggle.centerY(), dp(11));
+                  toggle.centerY(), controlsVisible ? dp(11) : dp(8));
     }
 
     @Override
@@ -252,7 +268,7 @@ public final class TouchControllerView extends View {
             rightTrigger != null && rightTrigger.inUse ? 1 : 0);
     }
 
-    private boolean hasPhysicalController() {
+    private static boolean hasPhysicalController() {
         for (int deviceId : InputDevice.getDeviceIds()) {
             if (SDLControllerManager.isDeviceSDLJoystick(deviceId)) return true;
         }

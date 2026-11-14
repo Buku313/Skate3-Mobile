@@ -74,6 +74,7 @@ public class LauncherActivity extends Activity {
     private Button characterButton;
     private Button submitModButton;
     private Button gpuDriverButton;
+    private Button touchControlsButton;
     private Button secondaryButton;
     private Button tertiaryButton;
     private Button updateButton;
@@ -191,12 +192,14 @@ public class LauncherActivity extends Activity {
         characterButton = actionButton(false);
         submitModButton = actionButton(false);
         gpuDriverButton = actionButton(false);
+        touchControlsButton = actionButton(false);
         secondaryButton = actionButton(false);
         tertiaryButton = actionButton(false);
         updateButton = actionButton(false);
         reportButton = actionButton(false);
         content.addView(primaryButton, matchFixed(dp(58), dp(10)));
         content.addView(characterButton, matchFixed(dp(54), dp(10)));
+        content.addView(touchControlsButton, matchFixed(dp(54), dp(10)));
         content.addView(submitModButton, matchFixed(dp(54), dp(10)));
         setButton(submitModButton, "SUBMIT A MOD", view -> openModSubmission(), false);
         content.addView(secondaryButton, matchFixed(dp(54), dp(10)));
@@ -243,6 +246,7 @@ public class LauncherActivity extends Activity {
         }
         setButtonsEnabled(true);
         progressBar.setVisibility(View.GONE);
+        hide(touchControlsButton);
         String unsupported = compatibilityProblem();
         if (unsupported != null) {
             setLocalizedText(statusText, "DEVICE NOT SUPPORTED");
@@ -264,6 +268,7 @@ public class LauncherActivity extends Activity {
             setLocalizedText(detailText, Build.MODEL + "\nGame files: " + activeGame.getAbsolutePath());
             setButton(primaryButton, "PLAY SKATE 3", view -> launchGame(), true);
             configureSeiyuInstallButton(activeGame);
+            configureTouchControlsButton();
             configureAdvancedButton();
             if (scopedReady) {
                 setButton(secondaryButton, "REPAIR OR REINSTALL", view -> confirmReinstall(), false);
@@ -682,6 +687,23 @@ public class LauncherActivity extends Activity {
                                     cleanMessage(exception), exception);
             }
         });
+    }
+
+    private void configureTouchControlsButton() {
+        boolean enabled = TouchControllerView.isEnabled(this);
+        String label = enabled ? "TOUCH CONTROLS: ON" : "TOUCH CONTROLS: OFF";
+        setButton(touchControlsButton, label, view -> toggleTouchControls(), false);
+    }
+
+    private void toggleTouchControls() {
+        boolean next = !TouchControllerView.isEnabled(this);
+        TouchControllerView.setEnabled(this, next);
+        appendLog("Touch controls set to " + (next ? "ON" : "OFF") + " from the launcher.");
+        Toast.makeText(this, localize(next
+            ? "Touch controls on. The on-screen pad appears when you play."
+            : "Touch controls off. The screen stays clear for a physical controller."),
+            Toast.LENGTH_SHORT).show();
+        configureTouchControlsButton();
     }
 
     private void configureAdvancedButton() {
@@ -1405,6 +1427,7 @@ public class LauncherActivity extends Activity {
         characterButton.setEnabled(enabled);
         submitModButton.setEnabled(enabled);
         gpuDriverButton.setEnabled(enabled);
+        touchControlsButton.setEnabled(enabled);
         secondaryButton.setEnabled(enabled);
         tertiaryButton.setEnabled(enabled);
         updateButton.setEnabled(enabled && !checkingUpdate);
