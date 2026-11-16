@@ -330,8 +330,7 @@ public class LauncherActivity extends Activity {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode != RESULT_OK || data == null || data.getData() == null) {
             if (requestCode == REQUEST_SEIYU_TEXTURE) {
-                busy = false;
-                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                clearBusy();
                 refreshInterface();
             }
             return;
@@ -466,8 +465,7 @@ public class LauncherActivity extends Activity {
                       cleanMessage(exception));
         }
         runOnUiThread(() -> {
-            busy = false;
-            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            clearBusy();
             progressBar.setProgress(1000);
             setLocalizedText(statusText, "INSTALLATION COMPLETE");
             setLocalizedText(detailText, "Your files were verified and stayed on this device.");
@@ -575,8 +573,7 @@ public class LauncherActivity extends Activity {
                                          info.versionName));
                 pendingUpdateApk = apk;
                 runOnUiThread(() -> {
-                    busy = false;
-                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    clearBusy();
                     progressBar.setProgress(1000);
                     setLocalizedText(statusText, "UPDATE VERIFIED");
                     setLocalizedText(detailText, "Android will now open the installer. Your game files stay in place.");
@@ -591,8 +588,7 @@ public class LauncherActivity extends Activity {
             } catch (Exception exception) {
                 appendLog("App update failed: " + stackTrace(exception));
                 runOnUiThread(() -> {
-                    busy = false;
-                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    clearBusy();
                     progressBar.setVisibility(View.GONE);
                     new AlertDialog.Builder(this)
                         .setTitle("Update needs attention")
@@ -623,8 +619,7 @@ public class LauncherActivity extends Activity {
                 BundledMods.installSeiyu(this, activeGame.toPath());
                 appendLog("Bundled Seiyu Paradise Penguin files installed.");
                 runOnUiThread(() -> {
-                    busy = false;
-                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    clearBusy();
                     progressBar.setProgress(1000);
                     Toast.makeText(this,
                         "Seiyu is included and ready in RB + Start > Mods.",
@@ -634,8 +629,7 @@ public class LauncherActivity extends Activity {
             } catch (Exception exception) {
                 appendLog("Could not install bundled Seiyu: " + stackTrace(exception));
                 runOnUiThread(() -> {
-                    busy = false;
-                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    clearBusy();
                     progressBar.setVisibility(View.GONE);
                     new AlertDialog.Builder(this)
                         .setTitle("Seiyu needs attention")
@@ -671,8 +665,7 @@ public class LauncherActivity extends Activity {
                 BundledMods.installSeiyu(this, activeGameDirectory().toPath());
                 appendLog("Bundled Seiyu Paradise Penguin files restored.");
                 runOnUiThread(() -> {
-                    busy = false;
-                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    clearBusy();
                     progressBar.setProgress(1000);
                     Toast.makeText(this, "Seiyu restored and ready.", Toast.LENGTH_LONG).show();
                     refreshInterface();
@@ -854,8 +847,7 @@ public class LauncherActivity extends Activity {
                 CustomGpuDriver.Driver driver = CustomGpuDriver.importPackage(this, input);
                 appendLog("Imported custom GPU driver " + driver.label() + ".");
                 runOnUiThread(() -> {
-                    busy = false;
-                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    clearBusy();
                     progressBar.setVisibility(View.GONE);
                     Toast.makeText(this, driver.label() +
                         " imported but not enabled. System Driver remains selected.",
@@ -907,8 +899,7 @@ public class LauncherActivity extends Activity {
                     installed[index] = ModStore.isInstalled(gameRoot, mods.get(index));
                 }
                 runOnUiThread(() -> {
-                    busy = false;
-                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    clearBusy();
                     progressBar.setVisibility(View.GONE);
                     refreshInterface();
                     showModStoreList(mods, installed);
@@ -916,8 +907,7 @@ public class LauncherActivity extends Activity {
             } catch (Exception exception) {
                 appendLog("Mod Store catalog failed: " + stackTrace(exception));
                 runOnUiThread(() -> {
-                    busy = false;
-                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    clearBusy();
                     progressBar.setVisibility(View.GONE);
                     refreshInterface();
                     new AlertDialog.Builder(this)
@@ -1056,8 +1046,7 @@ public class LauncherActivity extends Activity {
                     (copied, total, message) -> showDownloadProgress(copied, total, message));
                 appendLog("Mod Store installed " + mod.name + " " + mod.version + ".");
                 runOnUiThread(() -> {
-                    busy = false;
-                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    clearBusy();
                     progressBar.setProgress(1000);
                     Toast.makeText(this, mod.name +
                         " installed. Select it in RB + Start > Mods.",
@@ -1088,8 +1077,7 @@ public class LauncherActivity extends Activity {
                 ModStore.uninstall(activeGameDirectory().toPath(), mod);
                 appendLog("Mod Store removed " + mod.name + ".");
                 runOnUiThread(() -> {
-                    busy = false;
-                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    clearBusy();
                     Toast.makeText(this, mod.name + " removed.", Toast.LENGTH_SHORT).show();
                     refreshInterface();
                 });
@@ -1103,8 +1091,7 @@ public class LauncherActivity extends Activity {
     private void showModStoreFailure(String message, Exception exception) {
         appendLog(message + "\n" + stackTrace(exception));
         runOnUiThread(() -> {
-            busy = false;
-            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            clearBusy();
             progressBar.setVisibility(View.GONE);
             new AlertDialog.Builder(this)
                 .setTitle("Mod Store needs attention")
@@ -1149,8 +1136,7 @@ public class LauncherActivity extends Activity {
                 Files.createDirectories(mod);
                 copyUriLimited(uri, mod.resolve("base.obj.installing"), MAX_SEIYU_MODEL_SIZE, false);
                 runOnUiThread(() -> {
-                    busy = false;
-                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    clearBusy();
                     pickSeiyuTexture();
                 });
             } catch (Exception exception) {
@@ -1176,8 +1162,7 @@ public class LauncherActivity extends Activity {
                            StandardCopyOption.REPLACE_EXISTING);
                 appendLog("Seiyu Paradise Penguin files installed.");
                 runOnUiThread(() -> {
-                    busy = false;
-                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    clearBusy();
                     Toast.makeText(this, "Seiyu installed. Choose it in RB + Start > Mods.",
                                    Toast.LENGTH_LONG).show();
                     refreshInterface();
@@ -1317,8 +1302,7 @@ public class LauncherActivity extends Activity {
                 deleteRecursively(partialDirectory);
                 deleteRecursively(gameDirectory);
                 runOnUiThread(() -> {
-                    busy = false;
-                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    clearBusy();
                     refreshInterface();
                 });
             } catch (Exception exception) {
@@ -1353,11 +1337,15 @@ public class LauncherActivity extends Activity {
         setButtonsEnabled(false);
     }
 
+    private void clearBusy() {
+        busy = false;
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    }
+
     private void showFailure(String message, Exception exception) {
         appendLog(message + "\n" + stackTrace(exception));
         runOnUiThread(() -> {
-            busy = false;
-            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            clearBusy();
             progressBar.setVisibility(View.GONE);
             new AlertDialog.Builder(this)
                 .setTitle(localize("Setup needs attention"))
