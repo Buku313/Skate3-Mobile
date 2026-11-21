@@ -116,6 +116,47 @@ final class LauncherStrings {
         put("Open GitHub", "Abrir GitHub");
         put("Device diagnostics copied.", "Diagnóstico do dispositivo copiado.");
         put("No browser is available. The diagnostics are copied.", "Nenhum navegador está disponível. O diagnóstico foi copiado.");
+        put("Advanced options", "Opções avançadas");
+        put("Experimental GPU driver", "Driver de GPU experimental");
+        put("GPU driver experiments", "Experimentos de driver de GPU");
+        put("Use System Driver", "Usar Driver do Sistema");
+        put("Enable experimental driver?", "Ativar driver experimental?");
+        put("Enable anyway", "Ativar mesmo assim");
+        put("Remove custom driver?", "Remover driver personalizado?");
+        put("Remove", "Remover");
+        put("This device does not appear to use a Snapdragon / Adreno GPU. Turnip is not compatible here, so Skate 3 will stay on the System Driver.",
+            "Este dispositivo não parece usar uma GPU Snapdragon / Adreno. O Turnip não é compatível aqui, então o Skate 3 continuará no Driver do Sistema.");
+        put("System Driver selected for the next launch.", "Driver do Sistema selecionado para a próxima inicialização.");
+        put("Custom driver selected for the next launch.", "Driver personalizado selecionado para a próxima inicialização.");
+        put("Custom driver removed.", "Driver personalizado removido.");
+        put("Update needs attention", "A atualização precisa de atenção");
+        put("Mod Store unavailable", "Loja de Mods indisponível");
+        put("Mod Store needs attention", "A Loja de Mods precisa de atenção");
+        put("MOD STORE", "LOJA DE MODS");
+        put("Open Mod Store", "Abrir Loja de Mods");
+        put("Close", "Fechar");
+        put("Restore bundled copy", "Restaurar cópia incluída");
+        put("This removes only the downloaded mod files. Your game installation and original skater are not changed.",
+            "Isto remove apenas os arquivos de mod baixados. A instalação do jogo e o skatista original não são alterados.");
+        put("Seiyu needs attention", "O Seiyu precisa de atenção");
+        put("Restore Seiyu", "Restaurar Seiyu");
+        put("Restore Seiyu Paradise Penguin", "Restaurar Seiyu Paradise Penguin");
+        put("Seiyu restored and ready.", "Seiyu restaurado e pronto.");
+        put("Seiyu installed. Choose it in RB + Start > Mods.", "Seiyu instalado. Escolha-o em RB + Start > Mods.");
+        put("Seiyu is bundled with the app and the original skater remains the default. Manual import is available only for development or restoring custom files. In game, press RB + Start and open Mods to switch characters.",
+            "O Seiyu vem incluído no aplicativo e o skatista original continua sendo o padrão. A importação manual está disponível apenas para desenvolvimento ou para restaurar arquivos personalizados. No jogo, pressione RB + Start e abra Mods para trocar de personagem.");
+        put("Choose files", "Escolher arquivos");
+        put("Do not enable this if Skate 3 already works.", "Não ative isto se o Skate 3 já funciona.");
+        put("will replace the working System Driver only inside Skate 3. It may crash, black-screen, or render incorrectly. You can return here and restore System Driver.",
+            "substituirá o Driver do Sistema funcional apenas dentro do Skate 3. Pode travar, ficar com a tela preta ou renderizar incorretamente. Você pode voltar aqui e restaurar o Driver do Sistema.");
+        put("This removes", "Isto remove");
+        put("from Skate 3 and selects the System Driver.", "do Skate 3 e seleciona o Driver do Sistema.");
+        put("imported but not enabled. System Driver remains selected.",
+            "importado, mas não ativado. O Driver do Sistema permanece selecionado.");
+        put("installed. Select it in RB + Start > Mods.", "instalado. Selecione-o em RB + Start > Mods.");
+        put("removed.", "removido.");
+        put("Your existing game and mod files were not changed.",
+            "Seus arquivos de jogo e de mods existentes não foram alterados.");
     }
 
     private LauncherStrings() {}

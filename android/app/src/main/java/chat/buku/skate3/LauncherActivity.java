@@ -595,9 +595,9 @@ public class LauncherActivity extends Activity {
                     getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                     progressBar.setVisibility(View.GONE);
                     new AlertDialog.Builder(this)
-                        .setTitle("Update needs attention")
+                        .setTitle(localize("Update needs attention"))
                         .setMessage("The app update was not installed: " + cleanMessage(exception))
-                        .setPositiveButton("OK", (dialog, which) -> refreshInterface())
+                        .setPositiveButton(localize("OK"), (dialog, which) -> refreshInterface())
                         .show();
                 });
             }
@@ -638,11 +638,11 @@ public class LauncherActivity extends Activity {
                     getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                     progressBar.setVisibility(View.GONE);
                     new AlertDialog.Builder(this)
-                        .setTitle("Seiyu needs attention")
+                        .setTitle(localize("Seiyu needs attention"))
                         .setMessage("The included Seiyu files could not be installed: " +
                                     cleanMessage(exception) +
                                     "\n\nSkate 3 can still use the original skater. You can retry from Characters.")
-                        .setPositiveButton("OK", (dialog, which) -> refreshInterface())
+                        .setPositiveButton(localize("OK"), (dialog, which) -> refreshInterface())
                         .show();
                 });
             }
@@ -653,13 +653,13 @@ public class LauncherActivity extends Activity {
     private void showSeiyuIncluded(File activeGame) {
         boolean ready = BundledMods.isSeiyuReady(activeGame.toPath());
         AlertDialog.Builder dialog = new AlertDialog.Builder(this)
-            .setTitle("Seiyu Paradise Penguin")
+            .setTitle(localize("Seiyu Paradise Penguin"))
             .setMessage(ready
                 ? "Seiyu comes with Skate 3 Mobile and is ready to skate. In game, press RB + Start and open Mods > Playable Character to switch between Seiyu and the original skater."
                 : "Seiyu comes with Skate 3 Mobile, but his local files need to be restored. The original skater is still available.")
-            .setNegativeButton("Close", null)
-            .setPositiveButton("Open Mod Store", (ignored, which) -> openModStore())
-            .setNeutralButton("Restore Seiyu", (ignored, which) -> restoreBundledSeiyu());
+            .setNegativeButton(localize("Close"), null)
+            .setPositiveButton(localize("Open Mod Store"), (ignored, which) -> openModStore())
+            .setNeutralButton(localize("Restore Seiyu"), (ignored, which) -> restoreBundledSeiyu());
         dialog.show();
     }
 
@@ -674,7 +674,7 @@ public class LauncherActivity extends Activity {
                     busy = false;
                     getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                     progressBar.setProgress(1000);
-                    Toast.makeText(this, "Seiyu restored and ready.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, localize("Seiyu restored and ready."), Toast.LENGTH_LONG).show();
                     refreshInterface();
                 });
             } catch (Exception exception) {
@@ -699,25 +699,25 @@ public class LauncherActivity extends Activity {
             ? "A custom GPU driver is active. System Driver is the normal and recommended setting. Change this only while troubleshooting a device-specific graphics problem."
             : "Skate 3 is using the device System Driver. This is the recommended setting. If the game already works, leave these options unchanged.";
         AlertDialog.Builder dialog = new AlertDialog.Builder(this)
-            .setTitle("Advanced options")
+            .setTitle(localize("Advanced options"))
             .setMessage(message)
-            .setNegativeButton("Close", null);
+            .setNegativeButton(localize("Close"), null);
         if (CustomGpuDriver.isLikelyAdrenoDevice()) {
-            dialog.setPositiveButton("GPU driver experiments",
+            dialog.setPositiveButton(localize("GPU driver experiments"),
                                      (ignored, which) -> showGpuDriverMenu());
             if (customActive) {
                 // Keep recovery available from the first dialog even if a
                 // vendor theme or a broken custom driver makes the detailed
                 // choices difficult to use.
-                dialog.setNeutralButton("Use System Driver", (ignored, which) -> {
+                dialog.setNeutralButton(localize("Use System Driver"), (ignored, which) -> {
                     CustomGpuDriver.useSystem(this);
-                    Toast.makeText(this, "System Driver selected for the next launch.",
+                    Toast.makeText(this, localize("System Driver selected for the next launch."),
                                    Toast.LENGTH_LONG).show();
                     refreshInterface();
                 });
             }
         } else {
-            dialog.setPositiveButton("OK", null);
+            dialog.setPositiveButton(localize("OK"), null);
         }
         dialog.show();
     }
@@ -725,9 +725,9 @@ public class LauncherActivity extends Activity {
     private void showGpuDriverMenu() {
         if (!CustomGpuDriver.isLikelyAdrenoDevice()) {
             new AlertDialog.Builder(this)
-                .setTitle("Experimental GPU driver")
-                .setMessage("This device does not appear to use a Snapdragon / Adreno GPU. Turnip is not compatible here, so Skate 3 will stay on the System Driver.")
-                .setPositiveButton("OK", null)
+                .setTitle(localize("Experimental GPU driver"))
+                .setMessage(localize("This device does not appear to use a Snapdragon / Adreno GPU. Turnip is not compatible here, so Skate 3 will stay on the System Driver."))
+                .setPositiveButton(localize("OK"), null)
                 .show();
             return;
         }
@@ -756,16 +756,16 @@ public class LauncherActivity extends Activity {
         panel.addView(description, matchWrap(dp(16)));
 
         AlertDialog dialog = new AlertDialog.Builder(this)
-            .setTitle("Experimental GPU driver")
+            .setTitle(localize("Experimental GPU driver"))
             .setView(panel)
-            .setNegativeButton("Close", null)
+            .setNegativeButton(localize("Close"), null)
             .create();
 
         Button system = actionButton(false);
         setButton(system, "USE SYSTEM DRIVER" +
                   (driver == null || !driver.enabled ? "  •  SELECTED" : ""), view -> {
             CustomGpuDriver.useSystem(this);
-            Toast.makeText(this, "System Driver selected for the next launch.",
+            Toast.makeText(this, localize("System Driver selected for the next launch."),
                            Toast.LENGTH_LONG).show();
             dialog.dismiss();
             refreshInterface();
@@ -805,14 +805,14 @@ public class LauncherActivity extends Activity {
 
     private void confirmCustomGpuDriver(CustomGpuDriver.Driver driver) {
         new AlertDialog.Builder(this)
-            .setTitle("Enable experimental driver?")
-            .setMessage("Do not enable this if Skate 3 already works. " + driver.label() +
-                        " will replace the working System Driver only inside Skate 3. It may crash, black-screen, or render incorrectly. You can return here and restore System Driver.")
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Enable anyway", (dialog, which) -> {
+            .setTitle(localize("Enable experimental driver?"))
+            .setMessage(localize("Do not enable this if Skate 3 already works.") + " " + driver.label() + " " +
+                        localize("will replace the working System Driver only inside Skate 3. It may crash, black-screen, or render incorrectly. You can return here and restore System Driver."))
+            .setNegativeButton(localize("Cancel"), null)
+            .setPositiveButton(localize("Enable anyway"), (dialog, which) -> {
                 try {
                     CustomGpuDriver.useCustom(this);
-                    Toast.makeText(this, "Custom driver selected for the next launch.",
+                    Toast.makeText(this, localize("Custom driver selected for the next launch."),
                                    Toast.LENGTH_LONG).show();
                     refreshInterface();
                 } catch (IOException exception) {
@@ -857,8 +857,8 @@ public class LauncherActivity extends Activity {
                     busy = false;
                     getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                     progressBar.setVisibility(View.GONE);
-                    Toast.makeText(this, driver.label() +
-                        " imported but not enabled. System Driver remains selected.",
+                    Toast.makeText(this, driver.label() + " " +
+                        localize("imported but not enabled. System Driver remains selected."),
                         Toast.LENGTH_LONG).show();
                     refreshInterface();
                 });
@@ -871,14 +871,14 @@ public class LauncherActivity extends Activity {
 
     private void confirmRemoveGpuDriver(CustomGpuDriver.Driver driver) {
         new AlertDialog.Builder(this)
-            .setTitle("Remove custom driver?")
-            .setMessage("This removes " + driver.label() +
-                        " from Skate 3 and selects the System Driver.")
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Remove", (dialog, which) -> {
+            .setTitle(localize("Remove custom driver?"))
+            .setMessage(localize("This removes") + " " + driver.label() + " " +
+                        localize("from Skate 3 and selects the System Driver."))
+            .setNegativeButton(localize("Cancel"), null)
+            .setPositiveButton(localize("Remove"), (dialog, which) -> {
                 try {
                     CustomGpuDriver.remove(this);
-                    Toast.makeText(this, "Custom driver removed.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, localize("Custom driver removed."), Toast.LENGTH_SHORT).show();
                     refreshInterface();
                 } catch (IOException exception) {
                     showFailure("Could not remove the custom GPU driver: " +
@@ -921,11 +921,11 @@ public class LauncherActivity extends Activity {
                     progressBar.setVisibility(View.GONE);
                     refreshInterface();
                     new AlertDialog.Builder(this)
-                        .setTitle("Mod Store unavailable")
+                        .setTitle(localize("Mod Store unavailable"))
                         .setMessage("The online catalog could not be loaded: " +
                                     cleanMessage(exception) +
                                     "\n\nSeiyu is included with the app and remains available offline.")
-                        .setPositiveButton("Close", null)
+                        .setPositiveButton(localize("Close"), null)
                         .show();
                 });
             }
@@ -990,9 +990,9 @@ public class LauncherActivity extends Activity {
             list.addView(card, matchWrap(dp(12)));
         }
         AlertDialog dialog = new AlertDialog.Builder(this)
-            .setTitle("MOD STORE")
+            .setTitle(localize("MOD STORE"))
             .setView(scroll)
-            .setNegativeButton("Close", null)
+            .setNegativeButton(localize("Close"), null)
             .create();
         modStoreListDialog = dialog;
         dialog.setOnDismissListener(ignored -> {
@@ -1032,16 +1032,16 @@ public class LauncherActivity extends Activity {
         AlertDialog.Builder dialog = new AlertDialog.Builder(this)
             .setTitle(mod.name)
             .setView(panel)
-            .setNegativeButton("Close", null);
+            .setNegativeButton(localize("Close"), null);
         if (bundledSeiyu) {
-            dialog.setPositiveButton("Restore bundled copy",
+            dialog.setPositiveButton(localize("Restore bundled copy"),
                                      (ignored, which) -> restoreBundledSeiyu());
         } else {
             dialog.setPositiveButton(installed ? "Reinstall" : "Install",
                                      (ignored, which) -> installStoreMod(mod));
         }
         if (installed && !bundledSeiyu) {
-            dialog.setNeutralButton("Remove", (ignored, which) -> confirmRemoveStoreMod(mod));
+            dialog.setNeutralButton(localize("Remove"), (ignored, which) -> confirmRemoveStoreMod(mod));
         }
         dialog.show();
     }
@@ -1059,8 +1059,8 @@ public class LauncherActivity extends Activity {
                     busy = false;
                     getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                     progressBar.setProgress(1000);
-                    Toast.makeText(this, mod.name +
-                        " installed. Select it in RB + Start > Mods.",
+                    Toast.makeText(this, mod.name + " " +
+                        localize("installed. Select it in RB + Start > Mods."),
                         Toast.LENGTH_LONG).show();
                     refreshInterface();
                 });
@@ -1073,10 +1073,10 @@ public class LauncherActivity extends Activity {
 
     private void confirmRemoveStoreMod(ModStore.Mod mod) {
         new AlertDialog.Builder(this)
-            .setTitle("Remove " + mod.name + "?")
-            .setMessage("This removes only the downloaded mod files. Your game installation and original skater are not changed.")
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Remove", (dialog, which) -> removeStoreMod(mod))
+            .setTitle(localize("Remove") + " " + mod.name + "?")
+            .setMessage(localize("This removes only the downloaded mod files. Your game installation and original skater are not changed."))
+            .setNegativeButton(localize("Cancel"), null)
+            .setPositiveButton(localize("Remove"), (dialog, which) -> removeStoreMod(mod))
             .show();
     }
 
@@ -1090,7 +1090,7 @@ public class LauncherActivity extends Activity {
                 runOnUiThread(() -> {
                     busy = false;
                     getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                    Toast.makeText(this, mod.name + " removed.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, mod.name + " " + localize("removed."), Toast.LENGTH_SHORT).show();
                     refreshInterface();
                 });
             } catch (Exception exception) {
@@ -1107,19 +1107,19 @@ public class LauncherActivity extends Activity {
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             progressBar.setVisibility(View.GONE);
             new AlertDialog.Builder(this)
-                .setTitle("Mod Store needs attention")
-                .setMessage(message + "\n\nYour existing game and mod files were not changed.")
-                .setPositiveButton("OK", (dialog, which) -> refreshInterface())
+                .setTitle(localize("Mod Store needs attention"))
+                .setMessage(message + "\n\n" + localize("Your existing game and mod files were not changed."))
+                .setPositiveButton(localize("OK"), (dialog, which) -> refreshInterface())
                 .show();
         });
     }
 
     private void explainSeiyuInstall() {
         new AlertDialog.Builder(this)
-            .setTitle("Restore Seiyu Paradise Penguin")
-            .setMessage("Seiyu is bundled with the app and the original skater remains the default. Manual import is available only for development or restoring custom files. In game, press RB + Start and open Mods to switch characters.")
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Choose files", (dialog, which) -> pickSeiyuModel())
+            .setTitle(localize("Restore Seiyu Paradise Penguin"))
+            .setMessage(localize("Seiyu is bundled with the app and the original skater remains the default. Manual import is available only for development or restoring custom files. In game, press RB + Start and open Mods to switch characters."))
+            .setNegativeButton(localize("Cancel"), null)
+            .setPositiveButton(localize("Choose files"), (dialog, which) -> pickSeiyuModel())
             .show();
     }
 
@@ -1178,7 +1178,7 @@ public class LauncherActivity extends Activity {
                 runOnUiThread(() -> {
                     busy = false;
                     getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                    Toast.makeText(this, "Seiyu installed. Choose it in RB + Start > Mods.",
+                    Toast.makeText(this, localize("Seiyu installed. Choose it in RB + Start > Mods."),
                                    Toast.LENGTH_LONG).show();
                     refreshInterface();
                 });
@@ -1339,7 +1339,7 @@ public class LauncherActivity extends Activity {
         new AlertDialog.Builder(this)
             .setTitle(localize("Setup log"))
             .setMessage(contents)
-            .setPositiveButton("OK", null)
+            .setPositiveButton(localize("OK"), null)
             .show();
     }
 
@@ -1362,7 +1362,7 @@ public class LauncherActivity extends Activity {
             new AlertDialog.Builder(this)
                 .setTitle(localize("Setup needs attention"))
                 .setMessage(localize(message) + "\n\n" + localize("Your original ISO was not changed."))
-                .setPositiveButton("OK", (dialog, which) -> refreshInterface())
+                .setPositiveButton(localize("OK"), (dialog, which) -> refreshInterface())
                 .show();
         });
     }
